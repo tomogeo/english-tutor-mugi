@@ -1,5 +1,5 @@
-// 日語家教's background (背景) and the scene math: pure, so it is tested with plain numbers. The default background is the
-// classroom picture; むぎ stands on its lectern, so the picture and her live in one "scene" box with the picture's own aspect
+// 英語家教's background (背景) and the scene math: pure, so it is tested with plain numbers. The default background is the
+// classroom picture; Mugi stands on its lectern, so the picture and her live in one "scene" box with the picture's own aspect
 // ratio, sized to cover the stage (cover: cropped, never distorted, centred). The 背景 view (pinch / drag of the whole scene)
 // is kept in the settings; the render clamps it, so a stored view that no longer fits the stage is pulled back in.
 /**

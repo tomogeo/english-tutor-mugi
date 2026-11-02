@@ -9,7 +9,7 @@ import { LookupSheet } from '../LookupSheet';
 // the sheets opened from the tutor's top bar get the dark class (their backdrop carries .sheet-dark); the other callers pass no theme
 // and keeps the light sheets
 describe('sheet theme', () => {
-  it('日語家教 opens 設定, 速查 and 小提醒 with the dark class', async () => {
+  it('英語家教 opens 設定, 速查 and 小提醒 with the dark class', async () => {
     const TutorView = (await import('../TutorView')).default;
     const host = document.createElement('div');
     document.body.appendChild(host);

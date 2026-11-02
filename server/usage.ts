@@ -34,7 +34,6 @@ export const TTS_FALLBACK_AT = 0.9;
 
 /** the monthly free allowance of a tier, or undefined when the tier has none shown */
 export function freeOf(engine: TtsEngine, tier: string): number | undefined {
-  // VOICEVOX has no allowance (a local engine): no row in TTS_FREE_TIER, so no free tier and no fallback
   return (TTS_FREE_TIER as Record<string, Record<string, number> | undefined>)[engine]?.[tier];
 }
 
@@ -60,7 +59,7 @@ export const GOOGLE_FALLBACK_CHAIN: Record<string, string[]> = {
 // ---------------------------------------------------------------- TTS counting rules
 
 /**
- * The Google tier from a voice id: `cmn-TW-Wavenet-A` → 'wavenet', `ja-JP-Neural2-B` → 'neural2', `…-Standard-A` → 'standard',
+ * The Google tier from a voice id: `cmn-TW-Wavenet-A` → 'wavenet', `en-US-Neural2-F` → 'neural2', `…-Standard-A` → 'standard',
  * `en-US-Chirp3-HD-Aoede` → 'chirp3-hd'. Anything else → 'other' (counted, but no free allowance is shown for it).
  */
 export function googleTier(voice: string): string {
@@ -69,11 +68,9 @@ export function googleTier(voice: string): string {
 }
 
 /**
- * Azure has one tier here: neural voices (F0 free allowance 500,000 chars/month). VOICEVOX is a local engine: one tier, no
- * allowance, nothing billed (its characters are only counted).
+ * Azure has one tier here: neural voices (F0 free allowance 500,000 chars/month).
  */
 export function ttsBucket(engine: TtsEngine, voice: string): { engine: TtsEngine; tier: string } {
-  if (engine === 'voicevox') return { engine, tier: 'voicevox' };
   return engine === 'azure' ? { engine, tier: 'neural' } : { engine, tier: googleTier(voice) };
 }
 
@@ -199,8 +196,7 @@ export type ClaudeCounter = {
   estimated: number;
 };
 export type MonthUsage = {
-  /** voicevox is created on its first use (a month with no VOICEVOX speech has no such key) */
-  tts: { google: Record<string, TtsCounter>; azure: Record<string, TtsCounter>; voicevox?: Record<string, TtsCounter> };
+  tts: { google: Record<string, TtsCounter>; azure: Record<string, TtsCounter> };
   claude: Record<string, ClaudeCounter>;
 };
 /**

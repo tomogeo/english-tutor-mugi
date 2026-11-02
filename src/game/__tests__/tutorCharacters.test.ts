@@ -4,10 +4,10 @@ import { TUTOR_CHARACTER } from '../tutorCharacters';
 import { TUTOR_DEFAULT_NAME } from '../tutor';
 import { systemPrompt } from '../../../server/prompts.ts';
 
-describe('the teacher: むぎ', () => {
+describe('the teacher: Mugi', () => {
   it('is the one character, with her role, default name, subtitle and art folder', () => {
     expect(TUTOR_CHARACTER).toMatchObject({
-      id: 'mugi', role: 'Mugi', artDir: 'characters/mugi', defaultName: 'むぎ', subtitle: '倉鼠・日語家教',
+      id: 'mugi', role: 'Mugi', artDir: 'characters/mugi', defaultName: 'Mugi', subtitle: '倉鼠・英語家教',
     });
     expect(TUTOR_DEFAULT_NAME).toBe(TUTOR_CHARACTER.defaultName);
   });
@@ -17,10 +17,10 @@ describe('the teacher: むぎ', () => {
   });
 });
 
-describe('the persona of むぎ, the hamster (server/prompts.ts)', () => {
-  it('is named むぎ by default, is stable per call, and is a teacher with the same rules', () => {
+describe('the persona of Mugi, the hamster (server/prompts.ts)', () => {
+  it('is named Mugi by default, is stable per call, and is a teacher with the same rules', () => {
     const a = systemPrompt('Mugi');
-    expect(a).toContain('你是「むぎ」');
+    expect(a).toContain('你是「Mugi」');
     expect(a).toBe(systemPrompt('Mugi'));
     expect(a).toContain('segments');
     expect(a).toContain('tip');

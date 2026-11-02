@@ -1,8 +1,7 @@
-// Voice settings used by 日語家教 (ui/TutorView): the per-language voice group of ⚙️ 聲音
-// (engine, voice, 語速, 音調, the VOICEVOX switch and credit).
+// Voice settings used by 英語家教 (ui/TutorView): the per-language voice group of ⚙️ 聲音
+// (engine, voice, 語速, 音調).
 import { cloudDefaultVoice, cloudVoiceList, type CloudEngine } from '../game/cloudTts';
 import { ENGINE_CHOICES, TTS_PITCH_RANGE, TTS_RATE_RANGE, TTS_STEP, listVoices, pickVoice, previewVoice, setLangSettings, ttsSupported, type Lang, type LangVoice, type TtsEngine, type TtsSettings } from '../game/tts';
-import { VoicevoxSwitch } from './VoicevoxSwitch';
 
 /** a voice picker: automatic (the one pickVoice chooses) or one of the installed voices of the language; 試聽 speaks a sample */
 function VoiceRow({ label, lang, value, onChange }: { label: string; lang: Lang; value: string; onChange: (v: string) => void }) {
@@ -47,9 +46,6 @@ function CloudVoiceRow({ label, engine, lang, value, onChange }: { label: string
 export function LangVoiceGroup({ title, lang, tts, cloud }: { title: string; lang: Lang; tts: TtsSettings; cloud: Record<CloudEngine, boolean> | null }) {
   const s: LangVoice = tts[lang];
   const setVoice = (engine: TtsEngine, voice: string) => setLangSettings(lang, { voices: { ...s.voices, [engine]: voice } });
-  // VOICEVOX credit (its terms ask for the character name wherever the voice is used): only while it is the Japanese voice
-  const vvVoice = cloudVoiceList('voicevox', lang).find((v) => v.id === (s.voices.voicevox || cloudDefaultVoice('voicevox', lang)));
-  const credit = lang === 'ja' && s.engine === 'voicevox' ? `VOICEVOX:${vvVoice?.character ?? ''}`.replace(/:$/, '') : null;
   return (
     <div className="as-lang">
       <h4>{title}</h4>
@@ -61,8 +57,6 @@ export function LangVoiceGroup({ title, lang, tts, cloud }: { title: string; lan
           ))}
         </div>
       </div>
-      {lang === 'ja' && cloud && !cloud.voicevox && <div className="as-row"><span><small>電腦上的 VOICEVOX 沒開</small></span></div>}
-      {lang === 'ja' && <VoicevoxSwitch />}
       {s.engine === 'browser' ? (ttsSupported()
         ? <VoiceRow label="聲音" lang={lang} value={s.voices.browser ?? ''} onChange={(v) => setVoice('browser', v)} />
         : <div className="as-row"><span>聲音<small>此瀏覽器不支援語音合成</small></span></div>)
@@ -77,7 +71,6 @@ export function LangVoiceGroup({ title, lang, tts, cloud }: { title: string; lan
           style={{ '--f': (s.pitch - TTS_PITCH_RANGE.min) / (TTS_PITCH_RANGE.max - TTS_PITCH_RANGE.min) } as React.CSSProperties}
           onChange={(e) => setLangSettings(lang, { pitch: parseFloat(e.target.value) })} />
         <em>{s.pitch.toFixed(2)}</em></label>
-      {credit && <div className="as-row"><span><small>{credit}</small></span></div>}
     </div>
   );
 }

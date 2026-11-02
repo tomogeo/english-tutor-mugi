@@ -9,7 +9,7 @@ import { useSyncExternalStore } from 'react';
 // Fix: in standalone, size #root from the real screen height (`--app-h`), pinned at top: 0.
 //
 // Debug overlay: `?vp=1` in the URL shows live
-// viewport numbers; the flag persists in localStorage `mugi.vp`.
+// viewport numbers; the flag persists in localStorage `mugien.vp`.
 
 const nav = navigator as Navigator & { standalone?: boolean };
 const iosStandalone = nav.standalone === true;
@@ -41,7 +41,7 @@ function applyHeight() {
 }
 
 // ---- debug overlay ----
-const KEY = 'mugi.vp';
+const KEY = 'mugien.vp';
 let overlay: HTMLDivElement | null = null;
 let probe: HTMLDivElement | null = null;
 let timer = 0;

@@ -1,4 +1,4 @@
-// The chat bar used by 日語家教 (TutorView): the history overlay above it, the voice pill and
+// The chat bar used by 英語家教 (TutorView): the history overlay above it, the voice pill and
 // the notes, and the input row (💬/▾, field with ghost text, 日/中, 🗣️, 🎤, 換她開話題, 送出). The screen keeps the logic
 // (send, dictation, keyboard, voice and mic handling) and pass it in as props; this file only renders and reports taps.
 // Keyboard docking (useIOSKeyboard) and the layout around the bar are the screen's CSS (tutor.css).
@@ -15,7 +15,7 @@ export interface ChatBarProps {
   placeholder: string;
   /** the text the field shows while it is empty (the ghost, see ChatBar.css); defaults to the placeholder */
   ghostHint?: string;
-  /** the input is not usable (日語家教 without a Claude key) */
+  /** the input is not usable (英語家教 without a Claude key) */
   disabled?: boolean;
   /** iOS keyboard hooks (useIOSKeyboard): the view calls keyboard.onFocus / keyboard.onBlur here */
   onFocus?: () => void;
@@ -73,9 +73,9 @@ export function ChatBar(p: ChatBarProps) {
           <span className="as-ghost" aria-hidden="true">{value || p.ghostHint || placeholder}</span>
         </span>
         {p.stt && (
-          <button type="button" className="as-stt" aria-label={p.stt.lang === 'ja-JP' ? '辨識語言：日文，點一下改中文' : '辨識語言：中文，點一下改日文'}
+          <button type="button" className="as-stt" aria-label={p.stt.lang === 'en-US' ? '辨識語言：英文，點一下改中文' : '辨識語言：中文，點一下改英文'}
             title={p.stt.title} onClick={p.stt.onToggle}>
-            {p.stt.lang === 'ja-JP' ? '日' : '中'}
+            {p.stt.lang === 'en-US' ? '英' : '中'}
           </button>
         )}
         <button type="button" className={voice.active ? 'as-voice on' : 'as-voice'} aria-label={voice.active ? '結束語音對話' : '語音對話'}

@@ -58,7 +58,7 @@ describe('the characters on the lectern (figureAnchorBox)', () => {
     expect(fig.height / fig.width).toBeCloseTo(HAMSTER_ASPECT, 9);
   });
 
-  it('結衣 sits: 62% of the picture wide, centred, the point 64% down her picture at 58.7% of the height', () => {
+  it('Lily sits: 62% of the picture wide, centred, the point 64% down her picture at 58.7% of the height', () => {
     const scene = sceneBox(TALL, BACKDROP_IDENTITY, true);
     const fig = figureAnchorBox(scene, YUI_ASPECT, ANCHORS.yui);
     expect(fig.width / scene.width).toBeCloseTo(0.53, 9);
@@ -66,7 +66,7 @@ describe('the characters on the lectern (figureAnchorBox)', () => {
     expect((fig.top + fig.height * 0.64 - scene.top) / scene.height).toBeCloseTo(0.587, 9);
   });
 
-  it('悠真 stands: 76% of the picture wide, centred, his feet at 91.5% of the picture height', () => {
+  it('Ethan stands: 76% of the picture wide, centred, his feet at 91.5% of the picture height', () => {
     const scene = sceneBox(TALL, BACKDROP_IDENTITY, true);
     const fig = figureAnchorBox(scene, YUMA_ASPECT, ANCHORS.yuma);
     expect(fig.width / scene.width).toBeCloseTo(0.76, 9);

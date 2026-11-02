@@ -1,12 +1,10 @@
-// 小提醒筆記本: the tips she gave in 日語老師 mode, each with the Japanese it named. The player can hear it again (示範),
+// 小提醒筆記本: the tips she gave in 英語老師 mode, each with the English it named. The player can hear it again (示範),
 // say it (練習: the mic, judged by game/tipsJudge) or type it, until it is right; right ones move to 已學會.
 import { useEffect, useRef, useState } from 'react';
 import { loadTips, onTips, removeTip, updateTip, type TipEntry } from '../game/tipsBook';
 import { judgeSaid } from '../game/tipsJudge';
 import { aiServicesOf, loadTutor } from '../game/tutor';
 import { speakReply, stopSpeaking } from '../game/tts';
-import { stripRuby } from '../game/furigana';
-import { rubyNodes } from './Furigana';
 import { speechNoteText, useSpeechInput } from './useSpeechInput';
 import { IconClose } from './icons';
 
@@ -61,7 +59,7 @@ export function TipsSheet(props: { onClose: () => void; theme?: 'dark' }) {
     },
     onEnd: () => { setLive(''); setPractice(null); },
     onError: (code) => { setNote(speechNoteText(code)); setPractice(null); },
-  }, { lang: 'ja-JP' });
+  }, { lang: 'en-US' });
 
   const startPractice = (id: string, target: string) => {
     if (mic.listening) { mic.stop(); return; } // tapping again while listening stops it
@@ -74,7 +72,7 @@ export function TipsSheet(props: { onClose: () => void; theme?: 'dark' }) {
 
   const demo = (target: string) => {
     if (mic.listening) mic.stop();
-    speakReply(stripRuby(target)); // the readings are for display only
+    speakReply(target);
   };
 
   const learned = tips.filter((t) => t.mastered);
@@ -88,12 +86,12 @@ export function TipsSheet(props: { onClose: () => void; theme?: 'dark' }) {
     const listeningHere = practice?.id === e.id;
     return (
       <li key={e.id} className={`tip-card${e.mastered ? ' done' : ''}`}>
-        <p className="tip-text">{rubyNodes(e.text)}</p>
+        <p className="tip-text">{e.text}</p>
         {e.targets.length > 0 && (
           <div className="tip-targets" role="group" aria-label="練習的句子">
             {e.targets.map((t, i) => (
               <button key={`${i}-${t}`} type="button" className={i === idx ? 'tip-target on' : 'tip-target'} aria-pressed={i === idx}
-                onClick={() => setSel((s) => ({ ...s, [e.id]: i }))}>{rubyNodes(t)}</button>
+                onClick={() => setSel((s) => ({ ...s, [e.id]: i }))}>{t}</button>
             ))}
           </div>
         )}
@@ -157,7 +155,7 @@ export function TipsSheet(props: { onClose: () => void; theme?: 'dark' }) {
         {note && <div className="as-mic-note" role="status">{note}</div>}
         <div className="as-settings-body">
           {list.length === 0 && (
-            <p className="tip-empty">{tab === 'practice' ? '還沒有要練習的小提醒。之後她在日語老師模式裡給的提醒會收在這裡。' : '還沒有學會的句子。'}</p>
+            <p className="tip-empty">{tab === 'practice' ? '還沒有要練習的小提醒。之後她在英語老師模式裡給的提醒會收在這裡。' : '還沒有學會的句子。'}</p>
           )}
           <ul className="tip-list">{list.map(card)}</ul>
         </div>

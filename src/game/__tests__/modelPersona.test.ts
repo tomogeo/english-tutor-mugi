@@ -140,7 +140,7 @@ describe('the system prompt with a persona', () => {
     const custom = systemPrompt('Mugi', '冷靜沉穩的老師');
     expect(custom).toContain('個性：冷靜沉穩的老師\n稱呼對方為「你」。');
     expect(custom).not.toContain(defaultPersona('Mugi'));
-    const tail = (s: string) => s.slice(s.indexOf('\n你同時是使用者的日語會話夥伴'));
+    const tail = (s: string) => s.slice(s.indexOf('\n你同時是使用者的英語會話夥伴'));
     expect(tail(custom)).toBe(tail(systemPrompt('Mugi')));
     expect(custom.slice(0, custom.indexOf('個性：'))).toBe(systemPrompt('Mugi').slice(0, systemPrompt('Mugi').indexOf('個性：')));
   });
@@ -165,11 +165,11 @@ describe('the helper calls take their model from the request', () => {
     expect(b.calls[0].model).toBe('claude-haiku-5-5');
   });
   it('the tip rewrite runs on the model it is given, and on the default one without it', async () => {
-    const a = fakeProvider('{"tip":"要說 <ja>行きましょう</ja>"}');
-    await rewriteTipWith(a.provider, '<ja>行きましょう</ja>', undefined, 'claude-opus-5-5');
+    const a = fakeProvider('{"tip":"要說 <en>行きましょう</en>"}');
+    await rewriteTipWith(a.provider, '<en>行きましょう</en>', undefined, 'claude-opus-5-5');
     expect(a.calls[0].model).toBe('claude-opus-5-5');
-    const b = fakeProvider('{"tip":"要說 <ja>行きましょう</ja>"}');
-    await rewriteTipWith(b.provider, '<ja>行きましょう</ja>');
+    const b = fakeProvider('{"tip":"要說 <en>行きましょう</en>"}');
+    await rewriteTipWith(b.provider, '<en>行きましょう</en>');
     expect(b.calls[0].model).toBe('claude-haiku-5-5');
   });
 });
@@ -241,7 +241,7 @@ describe('the routes refuse a model outside the list, and report their personas 
     const j = r.body as { ok: boolean; model: string; personas: Record<string, string> };
     expect(j.ok).toBe(true);
     expect(j.personas).toEqual({ Mugi: defaultPersona('Mugi') });
-    expect(JSON.stringify(j)).not.toContain('你同時是使用者的日語會話夥伴');
+    expect(JSON.stringify(j)).not.toContain('你同時是使用者的英語會話夥伴');
   });
 
   it('POST /api/chat with a model outside the list is a 400 before anything is sent', async () => {
@@ -259,7 +259,7 @@ describe('the routes refuse a model outside the list, and report their personas 
     const judge = await call(routes['/api/chat'], 'POST', '/judge', { target: '学校に行きました', said: '学校へ行きました', model: 'nope' });
     expect(judge.status).toBe(400);
     expect(judge.body).toMatchObject({ message: '不支援的模型' });
-    const fix = await call(routes['/api/chat'], 'POST', '/fix-tip', { tip: '<ja>行きましょう</ja>', model: 'nope' });
+    const fix = await call(routes['/api/chat'], 'POST', '/fix-tip', { tip: '<en>行きましょう</en>', model: 'nope' });
     expect(fix.status).toBe(400);
     const lookup = await call(routes['/api/lookup'], 'POST', '/', { q: '去學校', model: 'nope' });
     expect(lookup.status).toBe(400);
@@ -278,8 +278,8 @@ describe('the model and persona settings (phone)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('an older save with no model or persona gets the defaults', () => {
-    expect(migrateTutor({ name: 'むぎ', sttLang: 'ja-JP' })).toEqual({
-      characters: DEFAULT_TUTOR.characters, activeId: 'mugi', sttLang: 'ja-JP', chatModel: '', helperModel: 'claude-haiku-5-5',
+    expect(migrateTutor({ name: 'Mugi', sttLang: 'en-US' })).toEqual({
+      characters: DEFAULT_TUTOR.characters, activeId: 'mugi', sttLang: 'en-US', tipLang: 'zh', showGloss: true, chatModel: '', helperModel: 'claude-haiku-5-5',
       providers: ['anthropic'], openaiModel: '', background: 'classroom', customBackgrounds: [], backgroundOpts: {},
     });
     expect(DEFAULT_TUTOR.helperModel).toBe('claude-haiku-5-5');
@@ -297,15 +297,15 @@ describe('the model and persona settings (phone)', () => {
     expect(migrateTutor({ persona: '  ' }).characters[0].persona).toBe('');
   });
   it('a stored persona and models come back through loadTutor (an older save: the persona is character 1s)', () => {
-    ls.setItem(TUTOR_KEY, JSON.stringify({ name: 'むぎ', sttLang: 'ja-JP', chatModel: 'claude-opus-5-5', helperModel: 'claude-sonnet-5-5', persona: '愛撒嬌' }));
+    ls.setItem(TUTOR_KEY, JSON.stringify({ name: 'Mugi', sttLang: 'en-US', chatModel: 'claude-opus-5-5', helperModel: 'claude-sonnet-5-5', persona: '愛撒嬌' }));
     const s = loadTutor();
     expect(s).toMatchObject({ chatModel: 'claude-opus-5-5', helperModel: 'claude-sonnet-5-5', activeId: 'mugi' });
-    expect(s.characters[0]).toMatchObject({ id: 'mugi', name: 'むぎ', persona: '愛撒嬌' });
+    expect(s.characters[0]).toMatchObject({ id: 'mugi', name: 'Mugi', persona: '愛撒嬌' });
     expect(s.characters).toHaveLength(3);
   });
 
   const sse = (text: string) => `data: ${JSON.stringify({ type: 'delta', text })}\n\n` + `data: ${JSON.stringify({ type: 'done', text })}\n\n`;
-  const reply = '{"segments":[{"lang":"ja","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}';
+  const reply = '{"segments":[{"lang":"en","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}';
   const teacher = { history: [{ from: 'me' as const, text: '嗨', t: 1 }], role: 'Mugi' as const, mode: 'teacher' as const, context: {} };
 
   it('the chat sends no model or persona when none is set', async () => {
@@ -318,7 +318,7 @@ describe('the model and persona settings (phone)', () => {
   });
 
   it('the chat sends the chosen model and the persona when they are set', async () => {
-    ls.setItem(TUTOR_KEY, JSON.stringify({ name: 'むぎ', sttLang: 'ja-JP', chatModel: 'claude-opus-5-5', persona: '冷靜的老師' }));
+    ls.setItem(TUTOR_KEY, JSON.stringify({ name: 'Mugi', sttLang: 'en-US', chatModel: 'claude-opus-5-5', persona: '冷靜的老師' }));
     const fetchMock = vi.fn(async () => new Response(sse(reply), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     await askClaude(teacher);
@@ -329,11 +329,11 @@ describe('the model and persona settings (phone)', () => {
 
   it('the 小提醒 rewrite, the judge and the 速查 send the helper model', async () => {
     const fetchMock = vi.fn(async (url: string) => new Response(
-      JSON.stringify(url.includes('fix-tip') ? { ok: true, tip: '要說 <ja>行きましょう</ja>' } : url.includes('judge') ? { ok: true, feedback: '好' } : { ok: true, answer: null, raw: '' }),
+      JSON.stringify(url.includes('fix-tip') ? { ok: true, tip: '要說 <en>行きましょう</en>' } : url.includes('judge') ? { ok: true, feedback: '好' } : { ok: true, answer: null, raw: '' }),
       { status: 200 },
     ));
     vi.stubGlobal('fetch', fetchMock);
-    await reviseTip('<ja>行きましょう</ja>', 10_000, 'claude-sonnet-5-5');
+    await reviseTip('<en>行きましょう</en>', 10_000, 'claude-sonnet-5-5');
     await judgeSaid('学校に行きました', '学校へ行きました', 'claude-opus-5-5');
     await askLookup('去學校', undefined, 'claude-sonnet-5-5');
     const sent = fetchMock.mock.calls.map((c) => JSON.parse(String((c as unknown as [string, RequestInit])[1].body)) as { model?: string });

@@ -119,10 +119,10 @@ export const CHAT_IDLE_RESET_MS = 60 * 60 * 1000;
 /** how many lines (tips not counted, 開話題 lines counted) the request keeps after an idle reset */
 export const CHAT_IDLE_KEEP = 5;
 
-/** 'Mugi' (むぎ, the hamster) is the only 日語家教 teacher (server/prompts.ts PERSONA, game/tutorCharacters.ts) */
+/** 'Mugi' (the hamster) is the only 英語家教 teacher (server/prompts.ts PERSONA, game/tutorCharacters.ts) */
 export const CHAT_ROLES = ['Mugi'] as const;
 export type ChatRoleId = (typeof CHAT_ROLES)[number];
-/** the Japanese-teacher mode is the only mode */
+/** the English-teacher mode is the only mode */
 export const CHAT_MODES = ['teacher'] as const;
 export type ChatModeId = (typeof CHAT_MODES)[number];
 
@@ -135,17 +135,22 @@ export const CHAT_TONES = [
 export type ChatContext = { timeOfDay?: string };
 
 /**
- * The user's message with the time and mode as a bracketed prefix, e.g. ［情境：晚上 9 點］［模式：日語老師］.
+ * The user's message with the time and mode as a bracketed prefix, e.g. ［情境：晚上 9 點］［模式：英語老師］.
  * Built once when the message is sent and stored on its chat line (ChatLine.sent): later requests re-send those exact bytes.
  */
 export function userTurn(text: string, ctx: ChatContext, mode: ChatModeId): string {
   const prefix = ctx.timeOfDay ? `［情境：${ctx.timeOfDay}］` : '';
-  const modeTag = mode === 'teacher' ? '［模式：日語老師］' : '';
+  const modeTag = mode === 'teacher' ? '［模式：英語老師］' : '';
   return `${prefix}${modeTag}${text}`;
 }
 
-/** one segment of her reply: lang 'ja' is what she says (voiced), gloss its short Chinese meaning (shown in brackets, not voiced) */
-export type ChatSegment = { lang: 'ja' | 'zh'; text: string; gloss: string };
+/** one segment of her reply: lang 'en' is what she says (voiced), gloss its short Chinese meaning (shown in brackets, not voiced) */
+export type ChatSegment = { lang: 'en' | 'zh'; text: string; gloss: string };
+
+/** the language her 小提醒 is written in: Traditional Chinese (default) or simple English (設定 › 小提醒語言) */
+export const TIP_LANGS = ['zh', 'en'] as const;
+export type TipLang = (typeof TIP_LANGS)[number];
+export const isTipLang = (v: unknown): v is TipLang => TIP_LANGS.some((l) => l === v);
 /**
  * Her whole reply as Claude writes it (Structured Outputs, the schema in server/claudeChat.ts CHAT_REPLY_SCHEMA). The server
  * sends it back as the `done` text (canonical form, see game/replyJson.ts); tone is left out only in a cut reply.

@@ -116,9 +116,9 @@ describe('a topic line is sent as it was stored', () => {
     expect(toApiMessages([{ from: 'me', text: '嗨', t: 0 }, line, { from: 'me', text: 'x', t: 2 }])[1].content).toBe(topic.zh);
   });
 
-  it('teacher mode: the Japanese in <ja> followed by its Chinese in brackets', () => {
-    const sent = `<ja>${topic.ja}</ja>（${topic.jaZh}）`;
-    const line: ChatLine = { from: 'her', text: `${topic.ja}（${topic.jaZh}）`, t: 1, sent };
+  it('teacher mode: the Japanese in <en> followed by its Chinese in brackets', () => {
+    const sent = `<en>${topic.en}</en>（${topic.jaZh}）`;
+    const line: ChatLine = { from: 'her', text: `${topic.en}（${topic.jaZh}）`, t: 1, sent };
     const msgs = toApiMessages([{ from: 'me', text: '嗨', t: 0 }, line, { from: 'me', text: 'x', t: 2 }]);
     expect(msgs[1]).toEqual({ role: 'assistant', content: sent });
   });

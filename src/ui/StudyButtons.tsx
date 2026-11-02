@@ -1,5 +1,5 @@
-// The two study buttons of the top bar, used by 日語家教 (TutorView): 小提醒筆記本 (with the
-// count of tips still being practised) and 速查 (the Japanese lookup). Only the buttons are shared (look, icon, badge, labels);
+// The two study buttons of the top bar, used by 英語家教 (TutorView): 小提醒筆記本 (with the
+// count of tips still being practised) and 速查 (the English lookup). Only the buttons are shared (look, icon, badge, labels);
 // each view places them where it wants and decides when they show. The sheets themselves are TipsSheet / LookupSheet.
 import { useEffect, useState } from 'react';
 import { loadTips, onTips, unmasteredCount } from '../game/tipsBook';
@@ -24,10 +24,10 @@ export function TipsButton({ open, onClick }: { open: number; onClick: () => voi
   );
 }
 
-/** 速查: the Japanese lookup; without the Claude AI key (`ready` false) it is dimmed, and the sheet explains why */
+/** 速查: the English lookup; without the Claude AI key (`ready` false) it is dimmed, and the sheet explains why */
 export function LookupButton({ ready, onClick }: { ready: boolean; onClick: () => void }) {
   return (
-    <button className={ready ? 'as-icon as-lookup-btn' : 'as-icon as-lookup-btn off'} title="速查（日語查詢）" aria-label="速查"
+    <button className={ready ? 'as-icon as-lookup-btn' : 'as-icon as-lookup-btn off'} title="速查（英語查詢）" aria-label="速查"
       aria-disabled={ready ? undefined : true} onClick={onClick}>
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z" /><path d="M4 19a2 2 0 0 0 2 2h13v-4" /><path d="M8 8h6" /><path d="M8 11h4" />

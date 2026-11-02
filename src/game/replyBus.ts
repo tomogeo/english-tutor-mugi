@@ -4,7 +4,7 @@
 export type ReplyEvent =
   | { type: 'start'; id: number }
   /** a chunk of new reply text (streaming); `lang` hints which TTS voice to use for this chunk */
-  | { type: 'delta'; id: number; text: string; lang?: 'zh' | 'ja' }
+  | { type: 'delta'; id: number; text: string; lang?: 'zh' | 'en' }
   /** the full reply is known; `text` is the complete visible reply */
   | { type: 'done'; id: number; text: string }
   | { type: 'error'; id: number; message: string };

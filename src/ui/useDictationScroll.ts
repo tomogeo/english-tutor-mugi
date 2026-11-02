@@ -1,6 +1,6 @@
 // Dictation into a one-line chat input: after each recognised update the field shows the END of the text (caret at the
 // end, scrolled fully right). Typing and caret moves by hand are left alone. No focus() call: a field that is not focused
-// only scrolls (iOS Safari would otherwise pull the keyboard up). Shared by 日語家教.
+// only scrolls (iOS Safari would otherwise pull the keyboard up). Shared by 英語家教.
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 
 /** Call the returned function with each value dictation writes into the input (just before setting it). */

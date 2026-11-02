@@ -15,7 +15,7 @@ export const MUSIC_URL = `${import.meta.env.BASE_URL}audio/bgm.mp3`;
 export type Bus = 'music' | 'voice';
 export type AudioSettings = { muted: boolean; master: number; music: number; voice: number };
 
-const SETTINGS_KEY = 'mugi.audio';
+const SETTINGS_KEY = 'mugien.audio';
 const DEFAULTS: AudioSettings = { muted: false, master: 1, music: 0.5, voice: 1 };
 
 let settings: AudioSettings = (() => {

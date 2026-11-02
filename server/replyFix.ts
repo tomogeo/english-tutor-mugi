@@ -1,34 +1,30 @@
 // Fixes to her chat reply, run on the server before it is sent as `done` (server/claudeChat.ts). The reply is the JSON
-// object of CHAT_REPLY_SCHEMA (game/claudeProtocol.ts ChatReplyJson). Pure apart from the readings analyser: no network.
-//   1. every segment's Japanese text, and the Japanese runs of the tip, get the kanji readings they lack (readings.ts);
-//   2. a tip with Japanese prose outside <ja>: the Japanese runs are wrapped in <ja>…</ja>, so the readings step treats
-//      them as Japanese and the tip keeps its Chinese. The tip is then rewritten in the background (tipRewrite; the client
-//      calls /api/chat/fix-tip). A Japanese-only tip stays wrapped and is rewritten the same way;
+// object of CHAT_REPLY_SCHEMA (game/claudeProtocol.ts ChatReplyJson). Pure: no network.
+//   1. when the 小提醒 should be in Chinese (tipLang 'zh') but came back as English prose (almost no Chinese outside <en>),
+//      it is marked for a background rewrite (tipRewrite; the client calls /api/chat/fix-tip once for it);
+//   2. in a Chinese tip, an English phrase the model forgot to wrap (two or more words outside <en>) is wrapped in <en>…</en>,
+//      so the tip practice can find it;
 //   3. a cut reply (the output limit) is read as far as it goes (game/replyJson.ts parsePartialJson) and written back in the
 //      canonical form, so what is stored and sent back to Claude is always a complete, valid JSON object.
 import { canonicalReplyJson, parsePartialJson, readReplyValue, toSegments } from '../src/game/replyJson.ts';
-import type { ChatSegment } from '../src/game/claudeProtocol.ts';
-import { fillReadings } from './readings.ts';
+import type { ChatSegment, TipLang } from '../src/game/claudeProtocol.ts';
 
-const JA = /<ja>([\s\S]*?)<\/ja>/g;
-const KANA = /[\u3040-\u30ff\uff66-\uff9d]/;
+const EN = /<en>([\s\S]*?)<\/en>/g;
 const HAN = /\p{Script=Han}/gu;
+const LATIN = /[A-Za-z]/;
 /**
- * A run of Japanese, wrapped in <ja>: kana with the kanji among them. It starts at kana, or at a kanji word of 1 to 4
- * characters that stands at the start of a word (after the start of the text, a space, or an opening quote or bracket)
- * and is followed directly by kana (学校に). It ends at kana, or at the Japanese punctuation that follows kana (行きました、).
- * Chinese stays outside: a Han character with no kana after it is never part of the run (要用に: only に is wrapped), and a
- * longer Chinese phrase (去哪裡要用に) is not taken for a kanji word.
+ * A run of English outside <en>: two or more words of Latin letters (with ' and - inside words), separated by spaces, with
+ * the sentence punctuation that follows. A lone word (a grammar term such as "past", or "-ed") is left as it is.
  */
-const JA_RUN = /(?:(?<=^|[\s「『（(［\[“"'])[\p{Script=Han}々〆ヶ]{1,4}(?=[\u3040-\u30ff\uff66-\uff9d]))?[\u3040-\u30ff\uff66-\uff9d](?:[\u3040-\u30ff\uff66-\uff9d\p{Script=Han}々〆ヶ]*[\u3040-\u30ff\uff66-\uff9d])?[、。！？…・]*/gu;
+const EN_RUN = /[A-Za-z][A-Za-z'’-]*(?:[ ,]+[A-Za-z][A-Za-z'’-]*)+[.!?]*/g;
 
-export type FixOptions = { log?: (msg: string) => void };
+export type FixOptions = { log?: (msg: string) => void; tipLang?: TipLang };
 
-/** the text outside every <ja>…</ja>, after applying fn to each such piece */
-function mapOutsideJa(text: string, fn: (s: string) => string): string {
+/** the text outside every <en>…</en>, after applying fn to each such piece */
+function mapOutsideEn(text: string, fn: (s: string) => string): string {
   let out = '';
   let last = 0;
-  for (const m of text.matchAll(JA)) {
+  for (const m of text.matchAll(EN)) {
     const at = m.index ?? 0;
     out += fn(text.slice(last, at)) + m[0];
     last = at + m[0].length;
@@ -36,70 +32,58 @@ function mapOutsideJa(text: string, fn: (s: string) => string): string {
   return out + fn(text.slice(last));
 }
 
-/** Japanese outside <ja> is wrapped in <ja>…</ja> (kana runs with their kanji). */
-export function wrapJapanese(tip: string): string {
-  return mapOutsideJa(tip, (s) => s.replace(JA_RUN, (m) => `<ja>${m}</ja>`));
-}
-
-/** The tip has Japanese prose outside <ja> (kana that are not inside a <ja>…</ja>). */
-export function hasJapaneseProse(tip: string): boolean {
+/** the text outside every <en>…</en>, joined */
+function outsideEn(text: string): string {
   let outside = '';
-  mapOutsideJa(tip, (s) => { outside += s; return s; });
-  return KANA.test(outside);
+  mapOutsideEn(text, (s) => { outside += s; return s; });
+  return outside;
 }
 
-/** A tip is Chinese when no kana is left outside <ja> and at least two Chinese characters are. */
+/** English phrases (two or more words) outside <en> are wrapped in <en>…</en>. */
+export function wrapEnglish(tip: string): string {
+  return mapOutsideEn(tip, (s) => s.replace(EN_RUN, (m) => `<en>${m}</en>`));
+}
+
+/** A tip is Chinese when at least two Chinese characters stand outside <en>. */
 export function isChineseTip(tip: string): boolean {
-  let outside = '';
-  mapOutsideJa(tip, (s) => { outside += s; return s; });
-  return !KANA.test(outside) && (outside.match(HAN)?.length ?? 0) >= 2;
+  return (outsideEn(tip).match(HAN)?.length ?? 0) >= 2;
 }
 
-/** Chinese characters a Chinese explanation needs before quoted Japanese alone stops counting as "a Japanese tip" */
+/** Chinese characters a Chinese explanation needs before the tip stops counting as "an English tip" */
 const CHINESE_PROSE_MIN = 6;
 
 /**
- * The tip needs the background rewrite: it is Japanese prose, not a Chinese explanation that merely quotes Japanese in 「」
- * without <ja> (those are wrapped and shown as they are). After wrapping, a Chinese tip keeps its explanation outside <ja>.
+ * The tip needs the background rewrite into Chinese: it has English prose outside <en> and hardly any Chinese. A Chinese
+ * explanation that quotes English is fine as it is.
  */
 export function needsTipRewrite(tip: string): boolean {
-  if (!hasJapaneseProse(tip)) return false;
-  let outside = '';
-  mapOutsideJa(wrapJapanese(tip), (s) => { outside += s; return s; });
-  return KANA.test(outside) || (outside.match(HAN)?.length ?? 0) < CHINESE_PROSE_MIN;
+  const outside = outsideEn(tip);
+  if (!LATIN.test(outside)) return false;
+  return (outside.match(HAN)?.length ?? 0) < CHINESE_PROSE_MIN;
 }
 
 export type FixedReply = { json: string; tipRewrite: boolean };
 
-/** One piece of Japanese (a segment's text, or the tip's kana prose) with its kanji readings: readings.ts works on <ja> runs. */
-async function withReadings(ja: string, log: (m: string) => void): Promise<string> {
-  const out = await fillReadings(`<ja>${ja}</ja>`, log);
-  return out.startsWith('<ja>') && out.endsWith('</ja>') ? out.slice(4, -5) : ja;
-}
-
 /**
- * Her reply as it is shown and stored: the segments' Japanese gets its readings, the tip is wrapped and read (see above),
- * and the result is the canonical JSON. tipRewrite: the tip has Japanese prose and is to be rewritten in the background.
- * Unreadable text (no JSON at all) comes back as an empty reply, which the client reports as "no reply".
+ * Her reply as it is shown and stored: the tip is read (see above) and the result is the canonical JSON. tipRewrite: the tip
+ * should be Chinese but is English, and is to be rewritten in the background. Unreadable text (no JSON at all) comes back as
+ * an empty reply, which the client reports as "no reply". With tipLang 'en' the tip is kept as the model wrote it.
  */
 export async function fixReplyJson(raw: string, opts: FixOptions = {}): Promise<FixedReply> {
   const log = opts.log ?? (() => {});
+  const tipLang: TipLang = opts.tipLang ?? 'zh';
   const value = parsePartialJson(raw);
   let strict = true;
   try { JSON.parse(raw); } catch { strict = false; }
   if (value === undefined) log(`[reply] no readable JSON in the reply (${raw.length} chars), sent empty`);
   else if (!strict) log(`[reply] reply cut or not valid JSON, the readable part is kept (${raw.length} chars)`);
   const fields = readReplyValue(value);
-  const segments: ChatSegment[] = [];
-  for (const s of toSegments(fields)) {
-    const text = s.lang === 'ja' ? await withReadings(s.text, log) : s.text;
-    segments.push({ lang: s.lang, text, gloss: s.gloss });
-  }
-  // the rewrite check reads the tip as the model wrote it (before wrapping)
+  const segments: ChatSegment[] = toSegments(fields).map((s) => ({ lang: s.lang, text: s.text, gloss: s.gloss }));
   const written = fields.tip.trim();
+  if (tipLang === 'en') return { json: canonicalReplyJson({ segments, tip: written, tone: fields.tone }), tipRewrite: false };
+  // the rewrite check reads the tip as the model wrote it (before wrapping)
   const tipRewrite = needsTipRewrite(written);
-  const wrapped = wrapJapanese(written);
-  if (wrapped !== written) log(`[tip] Japanese in the tip wrapped in <ja>: ${written.slice(0, 60)}`);
-  const tip = wrapped ? await fillReadings(wrapped, log) : '';
+  const tip = tipRewrite ? written : wrapEnglish(written);
+  if (tip !== written) log(`[tip] English in the tip wrapped in <en>: ${written.slice(0, 60)}`);
   return { json: canonicalReplyJson({ segments, tip, tone: fields.tone }), tipRewrite };
 }

@@ -5,7 +5,7 @@
 // address). When the server answers 403 with error "pair_required", the banner asks for the code.
 export const PAIR_HEADER = 'X-Mugi-Pair';
 export const PAIR_PROMPT = '輸入電腦終端機顯示的配對碼';
-const PAIR_KEY = 'mugi.pair.v1';
+const PAIR_KEY = 'mugien.pair.v1';
 
 /** the stored pairing code ('' when none, or when the browser keeps no storage) */
 export function pairCode(): string {

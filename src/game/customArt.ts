@@ -1,5 +1,5 @@
 // 人設圖片 (custom character picture): the player's own picture of her, instead of the hamster. Stored only in this device's
-// IndexedDB (database `mugi-art`), never sent anywhere. Two modes: one picture (it bobs while she speaks), or 2–6 frames, each
+// IndexedDB (database `mugien-art`), never sent anywhere. Two modes: one picture (it bobs while she speaks), or 2–6 frames, each
 // tied to a mouth shape (a e i o u m) and shown while that shape is voiced. The pure rules (frameFor, canUseFrames) are
 // tested with plain objects; the IndexedDB and image paths are thin wrappers around the browser APIs.
 import { useEffect, useState } from 'react';
@@ -19,7 +19,7 @@ const ACCEPT_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const MAX_INPUT_BYTES = 15 * 1024 * 1024;
 const MAX_SIDE = 1024;
 
-const DB_NAME = 'mugi-art';
+const DB_NAME = 'mugien-art';
 /** version 2 adds the background store (game/tutorBackground); the art store is kept as it was */
 const DB_VERSION = 2;
 const STORE = 'art';
@@ -71,7 +71,7 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-/** runs one request on one of the mugi-art stores ('art' or 'background'); the database is opened and closed around it */
+/** runs one request on one of the mugien-art stores ('art' or 'background'); the database is opened and closed around it */
 export async function withArtStore<T>(store: string, mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await openDb();
   try {
@@ -111,7 +111,7 @@ export function artKeyOf(characterId: string): string {
 }
 
 /**
- * The saved picture(s) of a character; null when there are none or the storage cannot be read. Character 1 (むぎ) takes over the
+ * The saved picture(s) of a character; null when there are none or the storage cannot be read. Character 1 (Mugi) takes over the
  * one record older saves kept under KEY: it is copied to her own key and the old record is removed (only when it exists).
  */
 export async function loadCustomArt(characterId: string = 'mugi'): Promise<CustomArt | null> {
@@ -239,9 +239,9 @@ export function customPortraitOf(art: CustomArt | null, urls: Record<string, str
   };
 }
 
-/** a built-in character's two pictures (結衣, 悠真): the open picture while she speaks, the closed one when silent */
+/** a built-in character's two pictures (Lily, Ethan): the open picture while she speaks, the closed one when silent */
 export function filePortrait(open: string, closed: string): CustomPortrait {
   // open only for the widest shapes (a, o); closed for e, i, u, m and silence. The loudness fallback (device voice, cloud clips)
-  // mostly moves between the e, o and a bands, so this split is what makes the mouth flap; a VOICEVOX timeline alternates too
+  // mostly moves between the e, o and a bands, so this split is what makes the mouth flap
   return { mode: 'frames', pictureFor: (viseme) => (viseme === 'a' || viseme === 'o' ? open : closed), urls: [open, closed] };
 }

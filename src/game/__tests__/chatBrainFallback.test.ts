@@ -106,22 +106,22 @@ describe('claudeBrain: a 1:1 wrapper of askClaude', () => {
     expect(await claudeBrain.available()).toBe(false);
   });
 
-  it('every field of the Claude reply comes through unchanged (teacher mode: tip, tipJa, tipRaw, tipRewrite, spoken, segments, sent)', async () => {
-    const reply = '{"segments":[{"lang":"ja","text":"学校に行きました","gloss":"去了學校"}],"tip":"要說 学校に行きました，去哪裡要用「<ja>に</ja>」。","tone":"happy"}';
+  it('every field of the Claude reply comes through unchanged (teacher mode: tip, tipEn, tipRaw, tipRewrite, spoken, segments, sent)', async () => {
+    const reply = '{"segments":[{"lang":"en","text":"学校に行きました","gloss":"去了學校"}],"tip":"要說 学校に行きました，去哪裡要用「<en>に</en>」。","tone":"happy"}';
     stubServer(true, sse(reply.slice(0, 30), reply.slice(30)) + done(reply));
     await claudeStatus();
     const direct = await askClaude({ history: req().history, role: 'Mugi', mode: 'teacher', context: {} });
     const wrapped = await claudeBrain.reply({ ...req(), situation: {} });
     expect(wrapped).toEqual({
       text: direct.text, tone: direct.tone, spoken: direct.spoken, segments: direct.segments,
-      tip: direct.tip, tipJa: direct.tipJa, tipRaw: direct.tipRaw, tipRewrite: direct.tipRewrite, sent: direct.sent,
+      tip: direct.tip, tipEn: direct.tipEn, tipRaw: direct.tipRaw, tipRewrite: direct.tipRewrite, sent: direct.sent,
     });
     expect(wrapped.tip).toBeTruthy();
     expect(wrapped.sent).toBe(reply.replace(/"tip":"[^"]*"/, '"tip":""'));
   });
 
   it('the streamed text reaches onDelta through the request', async () => {
-    stubServer(true, sse('{"segments":[{"lang":"ja","text":"嗨呀","gloss":""}],"tip":"","tone":"happy"}') + done('{"segments":[{"lang":"ja","text":"嗨呀","gloss":""}],"tip":"","tone":"happy"}'));
+    stubServer(true, sse('{"segments":[{"lang":"en","text":"嗨呀","gloss":""}],"tip":"","tone":"happy"}') + done('{"segments":[{"lang":"en","text":"嗨呀","gloss":""}],"tip":"","tone":"happy"}'));
     await claudeStatus();
     const seen: string[] = [];
     await claudeBrain.reply({ ...req(), onDelta: (t) => seen.push(t) });

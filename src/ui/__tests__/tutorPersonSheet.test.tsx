@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// The 人物 sheet of 日語家教: the top bar's buttons, the sheet's sections (moved out of 設定), the free zoom at the top left, and
+// The 人物 sheet of 英語家教: the top bar's buttons, the sheet's sections (moved out of 設定), the free zoom at the top left, and
 // her saved figure view (only with a custom picture; the hamster starts at the default framing). The custom picture is a fake
 // from the mocked loadCustomArt; nothing is sent anywhere.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,11 +62,11 @@ async function closeSheet() {
 
 describe('the top bar', () => {
   it('has 設定, 速查 and 小提醒 on the right, in that order, and the subtitle under the name', async () => {
-    await mount({ characters: [{ id: 'mugi', name: 'ミオ', subtitle: '猫・日語家教' }] });
+    await mount({ characters: [{ id: 'mugi', name: 'ミオ', subtitle: '猫・英語家教' }] });
     const labels = [...host.querySelectorAll('.tutor-tools > button')].map((b) => b.getAttribute('aria-label')?.split('，')[0]);
     expect(labels).toEqual(['設定', '速查', '小提醒筆記本']);
     expect(host.querySelector('.tutor-title strong')?.textContent).toBe('ミオ');
-    expect(host.querySelector('.tutor-title span')?.textContent).toBe('猫・日語家教');
+    expect(host.querySelector('.tutor-title span')?.textContent).toBe('猫・英語家教');
     unmount();
   }, 60_000);
 

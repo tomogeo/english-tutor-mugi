@@ -1,4 +1,4 @@
-// むぎ's portrait: her body picture with the mouth overlay on top, the box from tutor.json. The lip-sync runs in a small clock
+// Mugi's portrait: her body picture with the mouth overlay on top, the box from tutor.json. The lip-sync runs in a small clock
 // (game/tutorFace.ts TutorFaceClock) that reads the voice bus every 40 ms and only re-renders when what is drawn changes.
 // She is faceless: the body is the whole figure, the mouth overlays are the only thing that moves.
 import { useEffect, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react';

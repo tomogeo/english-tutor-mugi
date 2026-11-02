@@ -16,8 +16,8 @@ const sseOf = (text: string, size = 9) => {
 };
 
 /** her reply: two Japanese segments with glosses, and the text the bubble shows for it */
-const REPLY = '{"segments":[{"lang":"ja","text":"学校に行きました","gloss":"去了學校"},{"lang":"ja","text":"楽しかった？","gloss":"好玩嗎？"}],"tip":"","tone":"happy"}';
-const SHOWN = '学校に行きました（去了學校）楽しかった？（好玩嗎？）';
+const REPLY = '{"segments":[{"lang":"en","text":"学校に行きました","gloss":"去了學校"},{"lang":"en","text":"楽しかった？","gloss":"好玩嗎？"}],"tip":"","tone":"happy"}';
+const SHOWN = '学校に行きました（去了學校） 楽しかった？（好玩嗎？）';
 
 /** feed a text to a parser in chunks of the given size; returns every voiced segment in order and the parser */
 function feed(text: string, size: number) {
@@ -46,7 +46,7 @@ describe('ReplyJsonParser: her JSON is read while it arrives', () => {
   });
 
   it('escapes, unicode escapes, brackets and commas split across chunks change nothing in the end', () => {
-    const raw = '{"segments":[{"lang":"ja","text":"he said \\"はい\\" \\u3042","gloss":"說 \\"好\\", 括號(x)"}],"tip":"","tone":"happy"}';
+    const raw = '{"segments":[{"lang":"en","text":"he said \\"はい\\" \\u3042","gloss":"說 \\"好\\", 括號(x)"}],"tip":"","tone":"happy"}';
     const want = 'he said "はい" あ（說 "好", 括號(x)）';
     for (const size of [1, 2, 3, 4, 5, 6, 11]) {
       const p = new ReplyJsonParser();
@@ -61,15 +61,15 @@ describe('ReplyJsonParser: her JSON is read while it arrives', () => {
 
   it('a segment is voiced only once the next one has started, never while it is being written', () => {
     const p = new ReplyJsonParser();
-    expect(p.push('{"segments":[{"lang":"ja","text":"学校に行きました","gloss":"去了學校"}')).toEqual([]);
-    expect(p.push(',{"lang":"ja","text":"楽')).toEqual([{ text: '学校に行きました', lang: 'ja' }]);
-    expect(p.push('しかった？","gloss":"好玩嗎？"}],"tip":"","tone":"happy"}')).toEqual([{ text: '楽しかった？', lang: 'ja' }]);
+    expect(p.push('{"segments":[{"lang":"en","text":"学校に行きました","gloss":"去了學校"}')).toEqual([]);
+    expect(p.push(',{"lang":"en","text":"楽')).toEqual([{ text: '学校に行きました', lang: 'en' }]);
+    expect(p.push('しかった？","gloss":"好玩嗎？"}],"tip":"","tone":"happy"}')).toEqual([{ text: '楽しかった？', lang: 'en' }]);
     expect(p.finish()).toEqual([]);
   });
 
   it('the whole reply in one push: every segment is voiced at once, the array having closed', () => {
     const { voiced } = feed(REPLY, REPLY.length);
-    expect(voiced).toEqual([{ text: '学校に行きました', lang: 'ja' }, { text: '楽しかった？', lang: 'ja' }]);
+    expect(voiced).toEqual([{ text: '学校に行きました', lang: 'en' }, { text: '楽しかった？', lang: 'en' }]);
   });
 
   it('every chunk size voices the same segments in the same order', () => {
@@ -78,15 +78,15 @@ describe('ReplyJsonParser: her JSON is read while it arrives', () => {
   });
 
   it('a cut reply voices its complete segments, and the cut one as far as it reads when the stream ends', () => {
-    const cut = '{"segments":[{"lang":"ja","text":"はい","gloss":"好"},{"lang":"ja","text":"いいえ';
+    const cut = '{"segments":[{"lang":"en","text":"はい","gloss":"好"},{"lang":"en","text":"いいえ';
     const { voiced, p } = feed(cut, 4);
-    expect(voiced).toEqual([{ text: 'はい', lang: 'ja' }, { text: 'いいえ', lang: 'ja' }]);
-    expect(p.visible).toBe('はい（好）いいえ');
+    expect(voiced).toEqual([{ text: 'はい', lang: 'en' }, { text: 'いいえ', lang: 'en' }]);
+    expect(p.visible).toBe('はい（好） いいえ');
   });
 
   it('the tip and the tone come through the stream', () => {
-    const { p } = feed('{"segments":[{"lang":"ja","text":"はい","gloss":"好"}],"tip":"要說 <ja>はい</ja>。","tone":"agree"}', 3);
-    expect(p.fields.tip).toBe('要說 <ja>はい</ja>。');
+    const { p } = feed('{"segments":[{"lang":"en","text":"はい","gloss":"好"}],"tip":"要說 <en>はい</en>。","tone":"agree"}', 3);
+    expect(p.fields.tip).toBe('要說 <en>はい</en>。');
     expect(p.fields.tone).toBe('agree');
   });
 
@@ -98,25 +98,25 @@ describe('ReplyJsonParser: her JSON is read while it arrives', () => {
   });
 
   it('a Chinese segment is shown, and the parser reports its lang (the caller keeps only the Japanese for the voice)', () => {
-    const { p, voiced } = feed('{"segments":[{"lang":"zh","text":"好呀","gloss":""},{"lang":"ja","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}', 6);
-    expect(p.visible).toBe('好呀はい（好）');
-    expect(voiced.map((s) => s.lang)).toEqual(['zh', 'ja']);
+    const { p, voiced } = feed('{"segments":[{"lang":"zh","text":"好呀","gloss":""},{"lang":"en","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}', 6);
+    expect(p.visible).toBe('好呀 はい（好）');
+    expect(voiced.map((s) => s.lang)).toEqual(['zh', 'en']);
   });
 });
 
-describe('splitTip: the tip with its <ja> tags', () => {
-  it('the label goes, the <ja> tags go, the Japanese inside is kept as plain text', () => {
-    expect(splitTip('小提醒：要說 <ja>学校に行きました</ja>，去哪裡要用「に」喔。').text).toBe('要說 学校に行きました，去哪裡要用「に」喔。');
+describe('splitTip: the tip with its <en> tags', () => {
+  it('the label goes, the <en> tags go, the Japanese inside is kept as plain text', () => {
+    expect(splitTip('小提醒：要說 <en>学校に行きました</en>，去哪裡要用「に」喔。').text).toBe('要說 学校に行きました，去哪裡要用「に」喔。');
   });
 
-  it('collects each <ja> inside the tip as a target, trimmed, in order; the spaces inside the text stay', () => {
-    const t = splitTip('小提醒：要說 <ja> 学校に行きました </ja>，不要說 <ja>学校へ行きました</ja>。');
+  it('collects each <en> inside the tip as a target, trimmed, in order; the spaces inside the text stay', () => {
+    const t = splitTip('小提醒：要說 <en> 学校に行きました </en>，不要說 <en>学校へ行きました</en>。');
     expect(t.targets).toEqual(['学校に行きました', '学校へ行きました']);
     expect(t.text).toBe('要說  学校に行きました ，不要說 学校へ行きました。');
   });
 
-  it('empty targets are dropped; a tip with no <ja> has no targets', () => {
-    expect(splitTip('小提醒：<ja>  </ja>只是說明。').targets).toEqual([]);
+  it('empty targets are dropped; a tip with no <en> has no targets', () => {
+    expect(splitTip('小提醒：<en>  </en>只是說明。').targets).toEqual([]);
     expect(splitTip('只有說明').targets).toEqual([]);
   });
 });
@@ -132,7 +132,7 @@ describe('askClaude: the reply is read from the stream and ends on the reply bus
   afterEach(() => vi.unstubAllGlobals());
 
   it('emits done after a streamed reply', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(sseOf('{"segments":[{"lang":"ja","text":"好呀","gloss":""}],"tip":"","tone":"happy"}'), { status: 200 })));
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(sseOf('{"segments":[{"lang":"en","text":"好呀","gloss":""}],"tip":"","tone":"happy"}'), { status: 200 })));
     const { events, off } = collect();
     const r = await askClaude(args);
     off();
@@ -159,7 +159,7 @@ describe('askClaude: the reply is read from the stream and ends on the reply bus
   });
 
   it('streams only the Japanese, returns the tip separately, and the done event carries the spoken text only', async () => {
-    const reply = '{"segments":[{"lang":"ja","text":"そうなんだ！","gloss":"這樣啊！"}],"tip":"小提醒：要說 <ja>学校</ja>。","tone":"happy"}';
+    const reply = '{"segments":[{"lang":"en","text":"そうなんだ！","gloss":"這樣啊！"}],"tip":"小提醒：要說 <en>学校</en>。","tone":"happy"}';
     vi.stubGlobal('fetch', vi.fn(async () => new Response(sseOf(reply), { status: 200 })));
     const { events, off } = collect();
     const r = await askClaude(teacher);
@@ -170,7 +170,7 @@ describe('askClaude: the reply is read from the stream and ends on the reply bus
     expect(r.tone).toBe('happy');
     const deltas = events.filter((e) => e.type === 'delta');
     expect(deltas.length).toBeGreaterThan(0);
-    expect(deltas.every((e) => e.type === 'delta' && e.lang === 'ja')).toBe(true);
+    expect(deltas.every((e) => e.type === 'delta' && e.lang === 'en')).toBe(true);
     expect(deltas.map((e) => (e.type === 'delta' ? e.text : '')).join('')).toBe('そうなんだ！');
     expect(events[events.length - 1]).toEqual({ type: 'done', id: expect.any(Number), text: 'そうなんだ！' });
   });
@@ -185,8 +185,8 @@ describe('askClaude: the reply is read from the stream and ends on the reply bus
 });
 
 describe('the stored reply: sent back as JSON, merged and fitted for the request', () => {
-  const A = '{"segments":[{"lang":"ja","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}';
-  const B = '{"segments":[{"lang":"ja","text":"いいえ","gloss":"不"}],"tip":"","tone":"sad"}';
+  const A = '{"segments":[{"lang":"en","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}';
+  const B = '{"segments":[{"lang":"en","text":"いいえ","gloss":"不"}],"tip":"","tone":"sad"}';
 
   it('two of her replies in a row go up as one JSON reply (no two JSON objects joined by a newline)', () => {
     const msgs = toApiMessages([
@@ -197,7 +197,7 @@ describe('the stored reply: sent back as JSON, merged and fitted for the request
     ]);
     expect(msgs).toEqual([
       { role: 'user', content: '嗨' },
-      { role: 'assistant', content: '{"segments":[{"lang":"ja","text":"はい","gloss":"好"},{"lang":"ja","text":"いいえ","gloss":"不"}],"tip":"","tone":"sad"}' },
+      { role: 'assistant', content: '{"segments":[{"lang":"en","text":"はい","gloss":"好"},{"lang":"en","text":"いいえ","gloss":"不"}],"tip":"","tone":"sad"}' },
       { role: 'user', content: 'x' },
     ]);
   });
@@ -213,7 +213,7 @@ describe('the stored reply: sent back as JSON, merged and fitted for the request
   });
 
   it('a topic line in the JSON form goes up as a reply with its Japanese and gloss', () => {
-    expect(topicSent('学校', '學校')).toBe('{"segments":[{"lang":"ja","text":"学校","gloss":"學校"}],"tip":"","tone":"happy"}');
+    expect(topicSent('学校', '學校')).toBe('{"segments":[{"lang":"en","text":"学校","gloss":"學校"}],"tip":"","tone":"happy"}');
     const msgs = toApiMessages([{ from: 'me', text: '嗨', t: 0 }, { from: 'her', text: '学校（學校）', t: 1, sent: topicSent('学校', '學校'), topic: true }, { from: 'me', text: 'x', t: 2 }]);
     expect(msgs[1].content).toBe(topicSent('学校', '學校'));
   });
@@ -229,7 +229,7 @@ describe('the stored reply: sent back as JSON, merged and fitted for the request
 
   it('a long stored reply is cut by its oldest segments: the request text stays valid JSON within the limit', () => {
     const many = canonicalReplyJson({
-      segments: Array.from({ length: 30 }, (_, i) => ({ lang: 'ja' as const, text: `${'あ'.repeat(100)}${i}`, gloss: '' })),
+      segments: Array.from({ length: 30 }, (_, i) => ({ lang: 'en' as const, text: `${'あ'.repeat(100)}${i}`, gloss: '' })),
       tip: '',
       tone: 'happy',
     });
@@ -313,8 +313,8 @@ describe('history stays byte-identical for the prompt cache', () => {
     expect(JSON.stringify(reqs[2].slice(0, reqs[1].length))).toBe(JSON.stringify(reqs[1]));
     expect(reqs[2].map((m) => m.role)).toEqual(['user', 'assistant', 'user', 'assistant', 'user']);
     // each turn keeps the situation it was sent with, even though the clock moved on
-    expect(reqs[2][0].content).toBe('［情境：早上 9 點］［模式：日語老師］嗨');
-    expect(reqs[2][4].content).toBe('［情境：中午 11 點］［模式：日語老師］好喔');
+    expect(reqs[2][0].content).toBe('［情境：早上 9 點］［模式：英語老師］嗨');
+    expect(reqs[2][4].content).toBe('［情境：中午 11 點］［模式：英語老師］好喔');
   });
 
   it('uses the stored sent string when there is one, the plain text otherwise', () => {
@@ -354,12 +354,12 @@ describe('tip lines in the request', () => {
   it('a tip is not sent back: her preceding message goes up without it (no <tip> in the history)', () => {
     const msgs = toApiMessages([
       { from: 'me', text: '我昨天去學校', t: 1 },
-      { from: 'her', text: '<ja>そうなんだ</ja>', t: 2 },
+      { from: 'her', text: '<en>そうなんだ</en>', t: 2 },
       { from: 'her', text: '小提醒：要說 学校に行きました。', t: 3, tip: true },
     ]);
     expect(msgs).toEqual([
       { role: 'user', content: '我昨天去學校' },
-      { role: 'assistant', content: '<ja>そうなんだ</ja>' },
+      { role: 'assistant', content: '<en>そうなんだ</en>' },
     ]);
     expect(JSON.stringify(msgs)).not.toContain('<tip>');
   });
@@ -367,11 +367,11 @@ describe('tip lines in the request', () => {
   it('tips the model wrote in Japanese do not come back and pull the next tips into Japanese', () => {
     const chat: ChatLine[] = [
       { from: 'me', text: '句1', t: 1 },
-      { from: 'her', text: '<ja>そうなんだ</ja>', t: 2 },
+      { from: 'her', text: '<en>そうなんだ</en>', t: 2 },
       { from: 'her', text: '「数が好き」の「数」だけだと意味があいまいです。', t: 3, tip: true },
       { from: 'me', text: '句2', t: 4 },
     ];
-    expect(toApiMessages(chat).map((m) => m.content)).toEqual(['句1', '<ja>そうなんだ</ja>', '句2']);
+    expect(toApiMessages(chat).map((m) => m.content)).toEqual(['句1', '<en>そうなんだ</en>', '句2']);
   });
 
   it('stays byte-identical across turns: an earlier turn with its tip is an exact prefix of the next request', () => {

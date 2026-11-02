@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  TIPS_KEY, TIPS_MAX, addTip, loadTips, normalizeJa, onTips, removeTip, resetTipsCacheForTest, sameJa, unmasteredCount, updateTip,
+  TIPS_KEY, TIPS_MAX, addTip, loadTips, normalizeEn, onTips, removeTip, resetTipsCacheForTest, sameEn, unmasteredCount, updateTip,
 } from '../tipsBook';
 
 /** an in-memory localStorage stand-in */
@@ -38,7 +38,7 @@ describe('tipsBook storage', () => {
     expect(e!.mastered).toBe(false);
     expect(typeof e!.at).toBe('number');
     expect(e!.id.length).toBeGreaterThan(0);
-    expect(TIPS_KEY).toBe('mugi.tips.v1');
+    expect(TIPS_KEY).toBe('mugien.tips.v1');
     const raw = store.m.get(TIPS_KEY)!;
     expect(JSON.parse(raw)).toHaveLength(1);
     expect(loadTips()).toEqual([e]);
@@ -158,31 +158,26 @@ describe('tipsBook storage', () => {
   });
 });
 
-describe('normalizeJa / sameJa', () => {
-  it('ignores punctuation and whitespace', () => {
-    expect(sameJa('学校に行きました。', '学校に行きました')).toBe(true);
-    expect(sameJa('「はい」！', 'はい')).toBe(true);
-    expect(sameJa('おはよう  ございます', 'おはようございます')).toBe(true);
-    expect(sameJa('ええ、そうですね…', 'ええそうですね')).toBe(true);
-    expect(sameJa('Hello, world!', 'Helloworld')).toBe(true);
+describe('normalizeEn / sameEn', () => {
+  it('ignores punctuation, case and whitespace', () => {
+    expect(sameEn('I went to school.', 'i went to school')).toBe(true);
+    expect(sameEn('"Yes!"', 'yes')).toBe(true);
+    expect(sameEn('Good   morning', 'Good morning')).toBe(true);
+    expect(sameEn('Hello, world!', 'Helloworld')).toBe(true);
   });
 
-  it('turns katakana into hiragana, so the same words match', () => {
-    expect(sameJa('コーヒー', 'こーひー')).toBe(true);
-    expect(sameJa('ワタシ', 'わたし')).toBe(true);
-  });
-
-  it('keeps the long vowel mark: カー and カア are different', () => {
-    expect(normalizeJa('カー')).toContain('ー');
-    expect(sameJa('カー', 'カア')).toBe(false);
+  it('a curly apostrophe and a straight one are the same; a missing one too', () => {
+    expect(sameEn('I’m fine.', "I'm fine")).toBe(true);
+    expect(sameEn("I'm fine", 'Im fine')).toBe(true);
   });
 
   it('NFKC folds full-width letters and digits', () => {
-    expect(sameJa('ＡＢＣ１２３', 'abc123')).toBe(true);
+    expect(sameEn('ＡＢＣ１２３', 'abc123')).toBe(true);
   });
 
-  it('particles and conjugation still count', () => {
-    expect(sameJa('学校に行きました', '学校へ行きました')).toBe(false);
-    expect(sameJa('学校に行きました', '学校に行きます')).toBe(false);
+  it('tense, articles and prepositions still count', () => {
+    expect(sameEn('I went to school', 'I go to school')).toBe(false);
+    expect(sameEn('I saw a cat', 'I saw the cat')).toBe(false);
+    expect(normalizeEn('In the park')).toBe('inthepark');
   });
 });

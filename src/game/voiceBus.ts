@@ -11,7 +11,7 @@ export type VoiceSource = {
   level(): number;
   /** Whether a voice line is currently playing. */
   playing(): boolean;
-  /** the mouth shape at this moment, when the line carries a timeline (VOICEVOX clips); absent or null: use the loudness */
+  /** the mouth shape at this moment, when the line carries a timeline; absent or null: use the loudness */
   visemeAt?(): VisemeCue | null;
 };
 

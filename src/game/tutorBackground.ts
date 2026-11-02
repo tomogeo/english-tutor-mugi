@@ -1,5 +1,5 @@
-// 背景圖片 (the player's own backgrounds for 日語家教): each added background is one picture kept in this device's IndexedDB
-// (database `mugi-art`, its `background` store, the record keyed by the background's id), never sent anywhere. PNG, JPEG or WebP
+// 背景圖片 (the player's own backgrounds for 英語家教): each added background is one picture kept in this device's IndexedDB
+// (database `mugien-art`, its `background` store, the record keyed by the background's id), never sent anywhere. PNG, JPEG or WebP
 // only (an SVG is refused). The picture is scaled so its longest side is at most 2048 px and written as WebP (quality 0.85; PNG
 // when the browser cannot write WebP). The one picture of older saves (key `picture`) is the background 'custom'.
 import { useEffect, useState } from 'react';

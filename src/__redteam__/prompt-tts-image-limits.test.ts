@@ -178,13 +178,13 @@ describe('每日花費上限', () => {
 // ---------------------------------------------------------------- TTS: body, voice, SSML, cache file name
 
 describe('TTS：請求內容、聲音白名單、SSML 跳脫、快取檔名', () => {
-  const body = (o: Record<string, unknown>) => JSON.stringify({ engine: 'azure', voice: 'ja-JP-NanamiNeural', text: 'こんにちは', ...o });
+  const body = (o: Record<string, unknown>) => JSON.stringify({ engine: 'azure', voice: 'en-US-AvaNeural', text: 'こんにちは', ...o });
 
   it('聲音必須在白名單：含引號、空白、斜線或路徑的聲音拒絕', () => {
-    expect(() => parseTtsBody(body({ voice: 'ja-JP-NanamiNeural" onload="x' }))).toThrow();
+    expect(() => parseTtsBody(body({ voice: 'en-US-AvaNeural" onload="x' }))).toThrow();
     expect(() => parseTtsBody(body({ voice: '../../.env.local' }))).toThrow();
-    expect(() => parseTtsBody(body({ voice: 'ja-JP-NanamiNeural ' }))).toThrow();
-    expect(() => parseTtsBody(body({ engine: 'google', voice: 'ja-JP-NanamiNeural' }))).toThrow();
+    expect(() => parseTtsBody(body({ voice: 'en-US-AvaNeural ' }))).toThrow();
+    expect(() => parseTtsBody(body({ engine: 'google', voice: 'en-US-AvaNeural' }))).toThrow();
     expect(() => parseTtsBody(body({ engine: 'file' }))).toThrow();
   });
 
@@ -204,7 +204,7 @@ describe('TTS：請求內容、聲音白名單、SSML 跳脫、快取檔名', ()
 
   it('[發現] SSML：文字經 escapeXml 跳脫，插入的 </prosody></voice> 不會關閉標籤', () => {
     const evil = '</prosody></voice><break time="10s"/><voice name="x">';
-    const { init } = azureRequest('eastasia', 'test-key', 'ja-JP-NanamiNeural', evil, 1, 1);
+    const { init } = azureRequest('eastasia', 'test-key', 'en-US-AvaNeural', evil, 1, 1);
     const ssml = String(init.body);
     expect(ssml.match(/<\/prosody>/g)).toHaveLength(1);
     expect(ssml).toContain('&lt;/prosody&gt;');

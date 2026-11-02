@@ -1,4 +1,4 @@
-// The ⚙️ settings sheet parts of 日語家教 (TutorView): the sheet shell, the 聲音 section
+// The ⚙️ settings sheet parts of 英語家教 (TutorView): the sheet shell, the 聲音 section
 // (mute, volumes, 朗讀回覆, the per-language voice groups), the 對話 section (the chat count and its clear) and the 用量 section.
 // The view keeps its own rows (名字, 其他) and passes them in as children.
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
@@ -15,7 +15,7 @@ import {
 } from '../game/tutorBackground';
 import { DEFAULT_SCENE, DIM_MAX, isBuiltinBackground, newBackgroundId } from '../game/tutorScene';
 import { getTtsSettings, onTtsSettings, setTtsSettings, ttsAvailable, type TtsSettings } from '../game/tts';
-import { CHAT_MODEL_CHOICES, PERSONA_MAX_CHARS, PROVIDERS_MAX, PROVIDER_LABELS, chatModelLabel, clipCodePoints, type ChatModelId, type ProviderId } from '../game/claudeProtocol';
+import { CHAT_MODEL_CHOICES, PERSONA_MAX_CHARS, PROVIDERS_MAX, PROVIDER_LABELS, chatModelLabel, clipCodePoints, type ChatModelId, type ProviderId, type TipLang } from '../game/claudeProtocol';
 import { logoutChatGpt, startChatGptLogin, type ChatGptStatus } from '../game/openaiStatus';
 import { fetchBudget, fetchKeysStatus, saveBudget, saveKeys, type BudgetStatus, type FieldStatus, type KeyName, type KeysStatus } from '../game/settingsApi';
 import { budgetLine } from '../game/budgetEstimate';
@@ -56,7 +56,7 @@ export function SettingsSheet({ onClose, children, theme, title = '設定' }: {
   );
 }
 
-/** 聲音: mute, the volume rows (`volumes`, default both), 朗讀回覆, and the 中文 / 日文 voice groups */
+/** 聲音: mute, the volume rows (`volumes`, default both), 朗讀回覆, and the 英文 / 中文 voice groups */
 export function SoundSection({ audio, tts, cloud, volumes = VOLUME_ROWS.map(([k]) => k) }: {
   audio: AudioSettings; tts: TtsSettings; cloud: CloudStatus | null; volumes?: VolumeKey[];
 }) {
@@ -73,9 +73,30 @@ export function SoundSection({ audio, tts, cloud, volumes = VOLUME_ROWS.map(([k]
       <label className="as-row"><span>朗讀回覆<small>她的回覆用語音念出來（嘴巴會跟著動）</small></span>
         <input type="checkbox" checked={tts.on} disabled={!ttsAvailable()} onChange={(e) => setTtsSettings({ on: e.target.checked })} /></label>
       <div className="as-lang-note">{cloud === null ? <small>雲端語音檢查中…</small> : (!cloud.azure || !cloud.google) && <small>Azure／Google 需要在 .env.local 填金鑰</small>}</div>
+      <LangVoiceGroup title="英文" lang="en" tts={tts} cloud={cloud} />
       <LangVoiceGroup title="中文" lang="zh" tts={tts} cloud={cloud} />
-      <LangVoiceGroup title="日文" lang="ja" tts={tts} cloud={cloud} />
       <div className="as-lang-note"><small>語速與音調在本機套用，雲端語音一律以原速合成（快取不會因調整而重算）。</small></div>
+    </>
+  );
+}
+
+/** 學習: the language of her 小提醒 (中文 / English) and whether her lines show their Chinese meaning in brackets */
+export function LearningSection({ tipLang, showGloss, onChange }: {
+  tipLang: TipLang; showGloss: boolean; onChange: (patch: { tipLang?: TipLang; showGloss?: boolean }) => void;
+}) {
+  return (
+    <>
+      <h3>學習</h3>
+      <div className="as-row as-stack"><span>小提醒語言<small>糾錯和文法說明用中文寫，或用簡單的英文寫（全英文沉浸）</small></span>
+        <div className="as-seg" role="radiogroup" aria-label="小提醒語言">
+          {([['zh', '中文'], ['en', 'English']] as const).map(([v, label]) => (
+            <button key={v} type="button" role="radio" aria-checked={tipLang === v} className={tipLang === v ? 'on' : ''}
+              onClick={() => onChange({ tipLang: v })}>{label}</button>
+          ))}
+        </div>
+      </div>
+      <label className="as-row"><span>顯示中文翻譯<small>她每句英文後面括號裡的中文意思；關掉可以練聽力</small></span>
+        <input type="checkbox" checked={showGloss} onChange={(e) => onChange({ showGloss: e.target.checked })} /></label>
     </>
   );
 }
@@ -239,7 +260,7 @@ export function CloudKeysSection({ onSaved, localPc = isLocalPc() }: { onSaved?:
 }
 
 /**
- * AI 服務: the services 日語家教 may use, in the order to try them (the order is sent with every AI request). Each row has an
+ * AI 服務: the services 英語家教 may use, in the order to try them (the order is sent with every AI request). Each row has an
  * on/off switch (at least one stays on) and 上移／下移. Claude needs its key (a box in its row, written to the PC's .env.local; a
  * phone sees only the status). ChatGPT signs in and out with its buttons on the PC only; a phone sees the status and picks the model.
  * `claudeOk` / `chatgpt`: null until read. theme 'dark': the dark sheet.
@@ -674,7 +695,7 @@ export function BackgroundSection({ active, added, pictures, dim, onSelect, onAd
         </label>
       )}
       {error && <div className="as-lang-note as-custom-err" role="alert"><small>{error}</small></div>}
-      <div className="as-lang-note"><small>預設是教室，角色站在講台上（結衣坐在上面，悠真站在前面）；其他背景角色站在畫面下方。自訂背景只存在這台裝置的瀏覽器裡，不會上傳。只收 PNG、JPG、WebP；最多 6 張。</small></div>
+      <div className="as-lang-note"><small>預設是教室，角色站在講台上（Lily 坐在上面，Ethan 站在前面）；其他背景角色站在畫面下方。自訂背景只存在這台裝置的瀏覽器裡，不會上傳。只收 PNG、JPG、WebP；最多 6 張。</small></div>
       <input ref={fileRef} type="file" accept={BACKGROUND_ACCEPT} hidden onChange={onFile} aria-label="選擇背景圖片" />
     </div>
   );

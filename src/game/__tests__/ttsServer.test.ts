@@ -48,8 +48,8 @@ describe('azureRequest', () => {
   });
 
   it('maps rate and pitch to percentages (pitch is halved)', () => {
-    const body = azureRequest('eastasia', 'k', 'ja-JP-NanamiNeural', 'はい', 0.8, 1.4).init.body as string;
-    expect(body).toContain('xml:lang="ja-JP"');
+    const body = azureRequest('eastasia', 'k', 'en-US-AvaNeural', 'はい', 0.8, 1.4).init.body as string;
+    expect(body).toContain('xml:lang="en-US"');
     expect(body).toContain('<prosody rate="-20%" pitch="+20%">');
   });
 
@@ -68,7 +68,7 @@ describe('googlePitch and googleRequest', () => {
     expect(googlePitch(3)).toBe(20);
   });
 
-  const req = googleRequest('G-SECRET', 'ja-JP-Neural2-B', 'はい、わかりました', 1.1, 1.4);
+  const req = googleRequest('G-SECRET', 'en-US-Neural2-F', 'はい、わかりました', 1.1, 1.4);
 
   it('keeps the key in the X-Goog-Api-Key header, never in the URL', () => {
     expect(req.url).toBe('https://texttospeech.googleapis.com/v1/text:synthesize');
@@ -81,7 +81,7 @@ describe('googlePitch and googleRequest', () => {
     const body = JSON.parse(req.init.body as string);
     expect(body).toEqual({
       input: { text: 'はい、わかりました' },
-      voice: { languageCode: 'ja-JP', name: 'ja-JP-Neural2-B' },
+      voice: { languageCode: 'en-US', name: 'en-US-Neural2-F' },
       audioConfig: { audioEncoding: 'MP3', speakingRate: 1.1, pitch: 8 },
     });
   });
@@ -104,17 +104,17 @@ describe('parseTtsBody (request validation)', () => {
   });
 
   it('accepts the male Japanese voices of the characters (Azure, Google) and lists them', () => {
-    for (const voice of ['ja-JP-KeitaNeural', 'ja-JP-DaichiNeural']) {
+    for (const voice of ['en-US-AndrewNeural', 'en-US-BrianNeural']) {
       expect(parseTtsBody(JSON.stringify({ ...ok, engine: 'azure', voice, text: 'こんにちは' })).voice).toBe(voice);
-      expect(TTS_VOICES.azure.ja.map((v) => v.id)).toContain(voice);
+      expect(TTS_VOICES.azure.en.map((v) => v.id)).toContain(voice);
     }
-    for (const voice of ['ja-JP-Neural2-C', 'ja-JP-Neural2-D', 'ja-JP-Wavenet-C']) {
+    for (const voice of ['en-US-Neural2-D', 'en-US-Neural2-D', 'en-US-Wavenet-D']) {
       expect(parseTtsBody(JSON.stringify({ ...ok, engine: 'google', voice, text: 'こんにちは' })).voice).toBe(voice);
-      expect(TTS_VOICES.google.ja.map((v) => v.id)).toContain(voice);
+      expect(TTS_VOICES.google.en.map((v) => v.id)).toContain(voice);
     }
     // the first of each list stays the default (the female voice)
-    expect(TTS_VOICES.azure.ja[0].id).toBe('ja-JP-NanamiNeural');
-    expect(TTS_VOICES.google.ja[0].id).toBe('ja-JP-Neural2-B');
+    expect(TTS_VOICES.azure.en[0].id).toBe('en-US-AvaNeural');
+    expect(TTS_VOICES.google.en[0].id).toBe('en-US-Neural2-F');
   });
 
   it('rejects a voice that the engine does not offer (also a voice of the other engine)', () => {
@@ -152,15 +152,15 @@ describe('engine configuration and status', () => {
 
   it('status reports booleans and the voice lists, never the keys', () => {
     const s = ttsStatus({ ...ALL, googleKey: '' });
-    expect(s).toEqual({ azure: true, google: false, voicevox: false, voices: { ...TTS_VOICES, voicevox: { zh: [], ja: [] } } });
+    expect(s).toEqual({ azure: true, google: false, voices: TTS_VOICES });
     expect(JSON.stringify(s)).not.toContain('SECRET');
   });
 
   it('each engine lists its default voice first', () => {
     expect(TTS_VOICES.azure.zh[0].id).toBe('zh-TW-HsiaoChenNeural');
-    expect(TTS_VOICES.azure.ja[0].id).toBe('ja-JP-NanamiNeural');
+    expect(TTS_VOICES.azure.en[0].id).toBe('en-US-AvaNeural');
     expect(TTS_VOICES.google.zh[0].id).toBe('cmn-TW-Wavenet-A');
-    expect(TTS_VOICES.google.ja[0].id).toBe('ja-JP-Neural2-B');
+    expect(TTS_VOICES.google.en[0].id).toBe('en-US-Neural2-F');
   });
 });
 

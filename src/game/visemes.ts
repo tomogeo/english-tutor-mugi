@@ -1,5 +1,5 @@
-// Mouth shapes for the 日語家教 lip-sync. Pure (no imports): the server (server/visemes.ts) builds the timeline from a
-// VOICEVOX audio_query and sends it in the X-TTS-Visemes header; the phone plays it against the clip's own clock.
+// Mouth shapes for the 英語家教 lip-sync. Pure (no imports): a clip may carry a mouth timeline in the X-TTS-Visemes header;
+// the phone plays it against the clip's own clock. The cloud voices send none, so the loudness drives the mouth.
 
 export type VisemeCode = 'a' | 'i' | 'u' | 'e' | 'o' | 'm';
 /** one mouth shape: start `t` and length `d` in milliseconds at speed 1 (the synthesized clip's own timing) */

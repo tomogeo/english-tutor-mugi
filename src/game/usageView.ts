@@ -155,7 +155,7 @@ export function currentMonthKey(now: Date = new Date()): string {
 }
 
 // The one-time notice: shown the first time a fallback happens in a month (remembered in this browser only).
-const NOTICE_KEY = 'mugi.usage.notice';
+const NOTICE_KEY = 'mugien.usage.notice';
 /** true the first time this month (and records it); false afterwards, or when storage is unavailable */
 export function firstFallbackThisMonth(month: string): boolean {
   try {

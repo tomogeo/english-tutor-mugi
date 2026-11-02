@@ -40,13 +40,13 @@ describe('ChatBar', () => {
     r.unmount();
   });
 
-  it('shows the 日/中 toggle, the topic button, the pill and the history when given', () => {
+  it('shows the 英/中 toggle, the topic button, the pill and the history when given', () => {
     const onStop = vi.fn();
     const r = render(base({
-      chatOpen: true, history: <li>hi</li>, stt: { lang: 'ja-JP', title: 'x', onToggle: () => {} },
+      chatOpen: true, history: <li>hi</li>, stt: { lang: 'en-US', title: 'x', onToggle: () => {} },
       onOpenTopic: () => {}, pill: { phase: 'listening', label: '聆聽中…', onStop }, notes: [false, '提示'],
     }));
-    expect(r.btn('辨識語言：日文，點一下改中文')?.textContent).toBe('日');
+    expect(r.btn('辨識語言：英文，點一下改中文')?.textContent).toBe('英');
     expect(r.btn('換她開話題')).toBeTruthy();
     expect(r.host.querySelector('.as-voice-pill')?.textContent).toContain('聆聽中');
     expect(r.host.querySelector('.as-history li')?.textContent).toBe('hi');

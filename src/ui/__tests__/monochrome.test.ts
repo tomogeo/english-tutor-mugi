@@ -1,4 +1,4 @@
-// The look is black and white: no pink, magenta or rose anywhere in the stylesheets, and the accent of 日語家教 is white.
+// The look is black and white: no pink, magenta or rose anywhere in the stylesheets, and the accent of 英語家教 is white.
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -32,7 +32,7 @@ describe('monochrome look', () => {
     expect(tutorCss).not.toContain('as-swatch');
   });
 
-  it('the accent of 日語家教 is white, and the text on it is near-black', () => {
+  it('the accent of 英語家教 is white, and the text on it is near-black', () => {
     const tutorCss = sheets.find((s) => s.name === 'src/ui/tutor.css')!.css;
     expect(tutorCss).toMatch(/\.tutor \{[^}]*--accent: #(fff|ffffff);/);
     expect(tutorCss).toMatch(/--on-accent: #111111;/);

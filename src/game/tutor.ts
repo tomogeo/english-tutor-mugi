@@ -1,11 +1,11 @@
-// 日語家教 (the tutor mode): its own settings and its own chat histories, in their own localStorage keys, so the chats never mix
+// 英語家教 (the tutor mode): its own settings and its own chat histories, in their own localStorage keys, so the chats never mix
 // with anything else. The settings hold the characters (人物): up to TUTOR_CHARACTERS_MAX of them, the three built-in ones first
-// (むぎ, 結衣, 悠真) and the added ones after. The active one is the one on screen and in the chat; each has its own chat history
+// (Mugi, Lily, Ethan) and the added ones after. The active one is the one on screen and in the chat; each has its own chat history
 // (tutorChatKey). Shared by the chat: the mic language (sttLang), the voices (game/tts), the speech on/off and the usage.
 import type { ChatLine } from './chatTypes';
 import {
-  CLAUDE_MODEL_DEFAULT, DEFAULT_PROVIDERS, OPENAI_MODEL_MAX_CHARS, PERSONA_MAX_CHARS, isChatModelId, parseProviderList, personaText,
-  type AiServices, type ChatModelId, type ProviderId,
+  CLAUDE_MODEL_DEFAULT, DEFAULT_PROVIDERS, OPENAI_MODEL_MAX_CHARS, PERSONA_MAX_CHARS, isChatModelId, isTipLang, parseProviderList, personaText,
+  type AiServices, type ChatModelId, type ProviderId, type TipLang,
 } from './claudeProtocol';
 
 export type { AiServices } from './claudeProtocol';
@@ -16,21 +16,22 @@ import { BACKDROP_IDENTITY, BUILTIN_BACKGROUNDS, cleanBackdropView, cleanBackgro
 /** the most backgrounds the player adds (the classroom and plain black are built in) */
 export const TUTOR_BACKGROUNDS_MAX = 6;
 
-export const TUTOR_KEY = 'mugi.tutor.v1';
-/** the chat history of むぎ (character 1) keeps this key, so today's chat is hers; the others use tutorChatKey */
-export const TUTOR_CHAT_KEY = 'mugi.tutor.chat.v1';
+export const TUTOR_KEY = 'mugien.tutor.v1';
+/** the chat history of Mugi (character 1) keeps this key, so today's chat is hers; the others use tutorChatKey */
+export const TUTOR_CHAT_KEY = 'mugien.tutor.chat.v1';
 /** the chat lines kept in storage (per character) */
 export const TUTOR_CHAT_KEEP = 60;
-/** her name on screen and in her ⚙️ (むぎ); the player may rename her */
+/** her name on screen and in her ⚙️ (Mugi); the player may rename her */
 export const TUTOR_DEFAULT_NAME = BUILTIN_CHARACTERS.mugi.defaultName;
 export const TUTOR_NAME_MAX = 8;
 /** the most characters (人物): the three built-in ones and up to five added */
 export const TUTOR_CHARACTERS_MAX = 8;
 export const TUTOR_NEW_NAME = '新角色';
-export const TUTOR_NEW_SUBTITLE = '日語家教';
+export const TUTOR_NEW_SUBTITLE = '英語家教';
 
 /**
- * sttLang: the language the mic listens in (日 ja-JP / 中 zh-TW).
+ * sttLang: the language the mic listens in (英 en-US / 中 zh-TW).
+ * tipLang: the language of her 小提醒 (中文 / English); showGloss: her lines show their Chinese meaning in brackets.
  * chatModel: the model of her chat; '' = the server's own setting (ANTHROPIC_MODEL).
  * helperModel: the model of 速查 and 小提醒 (the judge and the tip rewrite).
  * providers: the AI services in the order to try them (設定 › AI 服務): Claude, ChatGPT, or both; never empty.
@@ -43,7 +44,9 @@ export const TUTOR_NEW_SUBTITLE = '日語家教';
 export type TutorSettings = {
   characters: Character[];
   activeId: TutorCharacterId;
-  sttLang: 'ja-JP' | 'zh-TW';
+  sttLang: 'en-US' | 'zh-TW';
+  tipLang: TipLang;
+  showGloss: boolean;
   chatModel: '' | ChatModelId;
   helperModel: ChatModelId;
   providers: ProviderId[];
@@ -77,7 +80,7 @@ export const FIGURE_SCALE_MAX = 3;
 export const TUTOR_SUBTITLE_MAX = 16;
 export const TUTOR_SUBTITLE_DEFAULT = BUILTIN_CHARACTERS.mugi.subtitle;
 
-/** the default voice of a built-in character: none for むぎ (the 設定 page's), a female voice for 結衣, a male one for 悠真 */
+/** the default voice of a built-in character: none for Mugi (the 設定 page's), a female voice for Lily, a male one for Ethan */
 const BUILTIN_VOICE: Record<BuiltinId, CharacterVoice> = { mugi: null, yui: { gender: 'female' }, yuma: { gender: 'male' } };
 
 /** a built-in character as she starts (no saved view, no personality of her own, her default voice) */
@@ -89,7 +92,7 @@ export function builtinCharacter(id: BuiltinId): Character {
 export const DEFAULT_TUTOR: TutorSettings = {
   characters: BUILTIN_IDS.map(builtinCharacter),
   activeId: 'mugi',
-  sttLang: 'ja-JP', chatModel: '', helperModel: CLAUDE_MODEL_DEFAULT as ChatModelId, providers: [...DEFAULT_PROVIDERS], openaiModel: '',
+  sttLang: 'en-US', tipLang: 'zh', showGloss: true, chatModel: '', helperModel: CLAUDE_MODEL_DEFAULT as ChatModelId, providers: [...DEFAULT_PROVIDERS], openaiModel: '',
   background: 'classroom', customBackgrounds: [], backgroundOpts: {},
 };
 
@@ -196,7 +199,7 @@ export function figureViewStart(custom: boolean, stored: FigureView | null): { s
   return custom && stored ? { ...stored } : { scale: 1, x: 0, y: 0 };
 }
 
-/** the personality sent with her requests: her own text, else the default of her id (むぎ's is the server's own: '') */
+/** the personality sent with her requests: her own text, else the default of her id (Mugi's is the server's own: '') */
 export function effectivePersona(c: Character): string {
   return c.persona || defaultPersonaOf(c.id);
 }
@@ -214,7 +217,7 @@ function cleanCharacter(raw: unknown, id: string): Character {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const builtin = isBuiltinId(id) ? id : null;
   const base = builtin ? BUILTIN_CHARACTERS[builtin] : null;
-  // 結衣's old default subtitle (a university student) becomes the new default; anything the player typed is kept
+  // Lily's old default subtitle (a university student) becomes the new default; anything the player typed is kept
   const subtitle = cleanTutorSubtitle(o.subtitle, base?.subtitle ?? TUTOR_NEW_SUBTITLE);
   return {
     id,
@@ -288,7 +291,9 @@ export function migrateTutor(raw: unknown): TutorSettings {
   return {
     characters,
     activeId,
-    sttLang: o.sttLang === 'zh-TW' ? 'zh-TW' : 'ja-JP',
+    sttLang: o.sttLang === 'zh-TW' ? 'zh-TW' : 'en-US',
+    tipLang: isTipLang(o.tipLang) ? o.tipLang : 'zh',
+    showGloss: typeof o.showGloss === 'boolean' ? o.showGloss : true,
     chatModel: isChatModelId(o.chatModel) ? o.chatModel : '',
     helperModel: isChatModelId(o.helperModel) ? o.helperModel : DEFAULT_TUTOR.helperModel,
     providers: parseProviderList(o.providers) ?? [...DEFAULT_PROVIDERS],
@@ -337,7 +342,7 @@ export function addCharacter(s: TutorSettings, id: string = newCharacterId()): T
 }
 
 /**
- * Deletes an added character. The built-in ones (むぎ, 結衣, 悠真) and an unknown id change nothing. When the deleted one was the
+ * Deletes an added character. The built-in ones (Mugi, Lily, Ethan) and an unknown id change nothing. When the deleted one was the
  * active one, the first character becomes the active one.
  */
 export function deleteCharacter(s: TutorSettings, id: string): TutorSettings {
@@ -346,7 +351,7 @@ export function deleteCharacter(s: TutorSettings, id: string): TutorSettings {
   return { ...s, characters, activeId: s.activeId === id ? characters[0].id : s.activeId };
 }
 
-/** the storage key of a character's chat history: むぎ keeps today's key, the others have their own */
+/** the storage key of a character's chat history: Mugi keeps today's key, the others have their own */
 export function tutorChatKey(id: string = 'mugi'): string {
   return id === 'mugi' ? TUTOR_CHAT_KEY : `${TUTOR_CHAT_KEY}.${id}`;
 }

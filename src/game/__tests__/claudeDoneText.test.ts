@@ -13,8 +13,8 @@ const collect = () => {
   return { events, off };
 };
 
-const streamedJa = '{"segments":[{"lang":"ja","text":"学校に行きました","gloss":"去了學校"}],"tip":"","tone":"happy"}';
-const doneJa = '{"segments":[{"lang":"ja","text":"学校[がっこう]に行[い]きました","gloss":"去了學校"}],"tip":"","tone":"happy"}';
+const streamedJa = '{"segments":[{"lang":"en","text":"学校に行きました","gloss":"去了學校"}],"tip":"","tone":"happy"}';
+const doneJa = '{"segments":[{"lang":"en","text":"学校[がっこう]に行[い]きました","gloss":"去了學校"}],"tip":"","tone":"happy"}';
 
 describe('askClaude: the done text is the reply as shown', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -29,7 +29,7 @@ describe('askClaude: the done text is the reply as shown', () => {
     expect(r.text).toBe('学校[がっこう]に行[い]きました（去了學校）');
     expect(r.spoken).toBe('学校[がっこう]に行[い]きました');
     expect(r.tone).toBe('happy');
-    expect(r.segments.filter((s) => s.lang === 'ja').map((s) => s.text)).toEqual(['学校[がっこう]に行[い]きました']);
+    expect(r.segments.filter((s) => s.lang === 'en').map((s) => s.text)).toEqual(['学校[がっこう]に行[い]きました']);
     const deltas = events.filter((e) => e.type === 'delta').map((e) => (e.type === 'delta' ? e.text : '')).join('');
     expect(deltas).toBe('学校に行きました');
     expect(events[events.length - 1]).toEqual({ type: 'done', id: expect.any(Number), text: '学校[がっこう]に行[い]きました' });
@@ -44,25 +44,25 @@ describe('askClaude: the done text is the reply as shown', () => {
   });
 
   it('a repaired tip from the server replaces the streamed one, and its Japanese targets are collected', async () => {
-    const doneTip = '{"segments":[{"lang":"ja","text":"そうなんだ！","gloss":"這樣啊！"}],"tip":"要說 <ja>学校[がっこう]に行[い]きました</ja>，去哪裡要用「<ja>に</ja>」喔。","tone":"happy"}';
-    const body = sse('{"segments":[{"lang":"ja","text":"そうなんだ！","gloss":"這樣啊！"}],"tip":"學校に行きました"}') + done(doneTip, { tipRewrite: true });
+    const doneTip = '{"segments":[{"lang":"en","text":"そうなんだ！","gloss":"這樣啊！"}],"tip":"要說 <en>学校[がっこう]に行[い]きました</en>，去哪裡要用「<en>に</en>」喔。","tone":"happy"}';
+    const body = sse('{"segments":[{"lang":"en","text":"そうなんだ！","gloss":"這樣啊！"}],"tip":"學校に行きました"}') + done(doneTip, { tipRewrite: true });
     vi.stubGlobal('fetch', vi.fn(async () => new Response(body, { status: 200 })));
     const { off } = collect();
     const r = await askClaude(teacher);
     off();
     expect(r.tip).toBe('要說 学校[がっこう]に行[い]きました，去哪裡要用「に」喔。');
-    expect(r.tipJa).toEqual(['学校[がっこう]に行[い]きました', 'に']);
+    expect(r.tipEn).toEqual(['学校[がっこう]に行[い]きました', 'に']);
   });
 
   it('a tip missing from the done text leaves no tip, even though the stream had one', async () => {
-    const streamedTip = '{"segments":[{"lang":"ja","text":"そうなんだ！","gloss":""}],"tip":"學校に行きました","tone":"happy"}';
-    const doneNoTip = '{"segments":[{"lang":"ja","text":"そうなんだ！","gloss":""}],"tip":"","tone":"happy"}';
+    const streamedTip = '{"segments":[{"lang":"en","text":"そうなんだ！","gloss":""}],"tip":"學校に行きました","tone":"happy"}';
+    const doneNoTip = '{"segments":[{"lang":"en","text":"そうなんだ！","gloss":""}],"tip":"","tone":"happy"}';
     vi.stubGlobal('fetch', vi.fn(async () => new Response(sse(streamedTip) + done(doneNoTip), { status: 200 })));
     const { off } = collect();
     const r = await askClaude(teacher);
     off();
     expect(r.tip).toBeUndefined();
-    expect(r.tipJa).toBeUndefined();
+    expect(r.tipEn).toBeUndefined();
   });
 
   it('without a done text (older server) the streamed copy is used', async () => {

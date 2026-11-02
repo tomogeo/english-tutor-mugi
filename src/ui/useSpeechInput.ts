@@ -44,7 +44,7 @@ export interface SpeechHandlers {
 }
 
 export interface SpeechOptions {
-  /** BCP-47 language of the recognizer, e.g. 'zh-TW' (default) or 'ja-JP' */
+  /** BCP-47 language of the recognizer, e.g. 'zh-TW' (default) or 'en-US' */
   lang?: string;
   /**
    * dictation: keep listening across pauses. A session that ends (onend, a watchdog, a silence) is followed by a new one

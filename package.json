@@ -1,5 +1,5 @@
 {
-  "name": "mugi-tutor",
+  "name": "english-tutor-mugi",
   "private": true,
   "version": "0.1.0",
   "license": "MIT",
@@ -16,7 +16,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "0.135.0",
     "jose": "6.2.14",
-    "kuromoji": "0.1.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "soundtouchjs": "0.3.0"

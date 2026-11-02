@@ -11,17 +11,15 @@ import type { VoiceSource, VisemeCue } from './voiceBus';
 import { decodeVisemes, visemeIndexAt, type Viseme } from './visemes';
 import { reportTtsFallback, tierShort } from './usageView';
 
-/** VOICEVOX is a local engine (server/tts.ts): it speaks Japanese only, and its voices are the engine's styles */
-export type CloudEngine = 'azure' | 'google' | 'voicevox';
+/** the cloud engines (server/tts.ts) */
+export type CloudEngine = 'azure' | 'google';
 export type CloudVoice = { id: string; label: string; lang: string; character?: string };
-export type CloudStatus = { azure: boolean; google: boolean; voicevox: boolean; voices: Record<CloudEngine, Record<Lang, CloudVoice[]>> };
+export type CloudStatus = { azure: boolean; google: boolean; voices: Record<CloudEngine, Record<Lang, CloudVoice[]>> };
 
 /** used until the status is loaded (the server's first voice of each list is the same) */
 export const CLOUD_DEFAULT_VOICES: Record<CloudEngine, Record<Lang, string>> = {
-  azure: { zh: 'zh-TW-HsiaoChenNeural', ja: 'ja-JP-NanamiNeural' },
-  google: { zh: 'cmn-TW-Wavenet-A', ja: 'ja-JP-Neural2-B' },
-  // 四国めたん・ノーマル (style id 2); when missing, the first style offered
-  voicevox: { zh: '', ja: '2' },
+  azure: { zh: 'zh-TW-HsiaoChenNeural', en: 'en-US-AvaNeural' },
+  google: { zh: 'cmn-TW-Wavenet-A', en: 'en-US-Neural2-F' },
 };
 
 // ---------- status (GET /api/tts/status) ----------
@@ -35,9 +33,9 @@ export function onCloudStatus(l: () => void): () => void {
   return () => void statusListeners.delete(l);
 }
 /** the voices an engine offers for a language (empty until the status is loaded) */
-export const cloudVoiceList = (engine: CloudEngine, lang: Lang): CloudVoice[] => status?.voices[engine][lang] ?? [];
+export const cloudVoiceList = (engine: CloudEngine, lang: Lang): CloudVoice[] => status?.voices?.[engine]?.[lang] ?? [];
 
-/** the engine's default voice: its preferred one (四国めたん for VOICEVOX) when offered, else the first offered */
+/** the engine's default voice: its preferred one when offered, else the first offered */
 export function cloudDefaultVoice(engine: CloudEngine, lang: Lang): string {
   const offered = cloudVoiceList(engine, lang);
   const preferred = CLOUD_DEFAULT_VOICES[engine][lang];
@@ -92,12 +90,10 @@ export type CloudIo = SpeechIo & { fallbackActive(): boolean };
 const TICK_MS = 300;
 /** a download that takes longer is given up (the sentence goes to the browser), so the order cannot stall */
 const FETCH_TIMEOUT_MS = 12_000;
-/** VOICEVOX runs one synthesis at a time on this PC: a sentence may wait behind the ones before it */
-const FETCH_TIMEOUT_LOCAL_MS = 60_000;
 /** a clip that never reports its end is cut after its length plus this slack */
 const PLAY_SLACK_MS = 3000;
 
-/** a fetched sentence: the played audio and, from VOICEVOX, its mouth timing (X-TTS-Visemes, at speed 1) */
+/** a fetched sentence: the played audio and, when the server sends one, its mouth timing (X-TTS-Visemes, at speed 1) */
 type Clip = { buf: AudioBuffer; visemes: Viseme[] };
 type Job = {
   u: Utterance;
@@ -191,7 +187,7 @@ export function createCloudIo(o: CloudIoOptions): CloudIo {
     u.speaker?.kind === 'cloud' && u.speaker.engine === engine ? u.speaker.voice : o.voice(u.lang, engine);
 
   const fetchClip = async (job: Job, u: Utterance, engine: CloudEngine): Promise<Clip | null> => {
-    const timeout = setTimeout(() => job.ctl.abort(), engine === 'voicevox' ? FETCH_TIMEOUT_LOCAL_MS : FETCH_TIMEOUT_MS);
+    const timeout = setTimeout(() => job.ctl.abort(), FETCH_TIMEOUT_MS);
     try {
       // the server always synthesizes at rate 1 / pitch 1 (one cache entry per voice and text); 語速 and 音調 are applied here
       const ask = (voice: string) => d.fetch('/api/tts', {

@@ -47,13 +47,13 @@ describe('schemas are valid for Structured Outputs', () => {
     checkSchema(CHAT_REPLY_SCHEMA, 'CHAT');
     expect(CHAT_REPLY_SCHEMA.required).toEqual(['segments', 'tip', 'tone']);
     expect(CHAT_REPLY_SCHEMA.properties.tone.enum).toEqual([...CHAT_TONES]);
-    expect(CHAT_REPLY_SCHEMA.properties.segments.items.properties.lang.enum).toEqual(['ja', 'zh']);
+    expect(CHAT_REPLY_SCHEMA.properties.segments.items.properties.lang.enum).toEqual(['en', 'zh']);
   });
-  it('LOOKUP_SCHEMA level enum is exactly the JLPT levels plus 級外', () => {
+  it('LOOKUP_SCHEMA level enum is exactly the CEFR levels plus 其他', () => {
     const level = (LOOKUP_SCHEMA.properties.items.items.properties as Record<string, { enum?: string[] }>).level;
-    expect(level.enum).toEqual(['N5', 'N4', 'N3', 'N2', 'N1', '級外']);
+    expect(level.enum).toEqual(['A1', 'A2', 'B1', 'B2', 'C1', 'C2', '其他']);
     const gLevel = (LOOKUP_SCHEMA.properties.grammar.items.properties as Record<string, { enum?: string[] }>).level;
-    expect(gLevel.enum).toEqual(['N5', 'N4', 'N3', 'N2', 'N1', '級外']);
+    expect(gLevel.enum).toEqual(['A1', 'A2', 'B1', 'B2', 'C1', 'C2', '其他']);
   });
 });
 
@@ -68,17 +68,17 @@ describe('lookupAnswerWith sends the lookup schema', () => {
 
   it('a JSON reply becomes an answer', async () => {
     const reply = JSON.stringify({
-      items: [{ ja: 'がっこう', zh: '學校', level: 'N5', note: '' }],
+      items: [{ en: 'school', zh: '學校', level: 'A1', note: '' }],
       grammar: [],
-      examples: [{ ja: 'がっこうにいきます', zh: '去學校' }],
+      examples: [{ en: 'I go to school.', zh: '去學校' }],
       message: '',
     });
     const { provider } = fakeProvider(reply);
     const r = await lookupAnswerWith(provider, '學校');
     expect(r.answer).not.toBeNull();
     expect(r.answer!.items).toHaveLength(1);
-    expect(r.answer!.items[0]).toMatchObject({ zh: '學校', level: 'N5' });
-    expect(r.answer!.items[0].ja).toContain('がっこう');
+    expect(r.answer!.items[0]).toMatchObject({ zh: '學校', level: 'A1' });
+    expect(r.answer!.items[0].en).toContain('school');
     expect(r.answer!.examples).toHaveLength(1);
     expect(r.raw).toBe(reply);
   }, 20000);
@@ -94,7 +94,7 @@ describe('lookupAnswerWith sends the lookup schema', () => {
 describe('rewriteTipWith sends the tip schema', () => {
   it('passes output_config.format and keeps the tip model', async () => {
     const { provider, reqs } = fakeProvider('{"tip":"要說 がっこう 喔"}');
-    await rewriteTipWith(provider, '要說 <ja>がっこう</ja> 喔');
+    await rewriteTipWith(provider, '要說 <en>がっこう</en> 喔');
     expect(reqs[0].output_config?.format).toEqual({ type: 'json_schema', schema: TIP_FIX_SCHEMA });
     expect(reqs[0].model).toBe(TIP_FIX_MODEL);
     expect(reqs[0].thinking).toEqual({ type: 'disabled' });
@@ -103,7 +103,7 @@ describe('rewriteTipWith sends the tip schema', () => {
 
 describe('tipFromFixReply', () => {
   it('reads the tip field from JSON', () => {
-    expect(tipFromFixReply('{"tip":"要說 <ja>がっこう</ja> 喔"}')).toBe('要說 <ja>がっこう</ja> 喔');
+    expect(tipFromFixReply('{"tip":"要說 <en>がっこう</en> 喔"}')).toBe('要說 <en>がっこう</en> 喔');
   });
   it('removes a <tip> wrapper inside the tip field', () => {
     expect(tipFromFixReply('{"tip":"<tip>abc</tip>"}')).toBe('abc');

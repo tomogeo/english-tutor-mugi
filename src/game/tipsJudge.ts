@@ -2,8 +2,7 @@
 // phone with no network; anything else goes to the dev server's /api/chat/judge (Claude). When Claude cannot be
 // reached the answer is "not the same", never a guess that it is right.
 import { apiFetch } from './apiFetch';
-import { stripRuby } from './furigana';
-import { sameJa } from './tipsBook';
+import { sameEn } from './tipsBook';
 import type { AiServices } from './tutor';
 
 export type JudgeResult = { ok: boolean; feedback: string; by: 'local' | 'claude' | 'none' };
@@ -12,9 +11,7 @@ const UNREACHABLE = '和目標句不一樣（無法連線 Claude 做進一步判
 
 /** `model`: the 小提醒 model (the settings' 速查與小提醒 model); absent, the server's default */
 export async function judgeSaid(target: string, said: string, model?: string, services?: AiServices): Promise<JudgeResult> {
-  // the readings are for display only: the judge sees the plain Japanese
-  target = stripRuby(target);
-  if (sameJa(target, said)) return { ok: true, feedback: '完全正確！', by: 'local' };
+  if (sameEn(target, said)) return { ok: true, feedback: '完全正確！', by: 'local' };
   let res: Response;
   try {
     res = await apiFetch('/api/chat/judge', {

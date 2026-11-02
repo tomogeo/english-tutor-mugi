@@ -9,8 +9,7 @@ import {
 } from '../../../server/claudeChat.ts';
 import { dailyLimitHit, UsageStore } from '../../../server/usage.ts';
 import { TTS_CACHE_MEM_MAX_BYTES, TtsCache } from '../../../server/ttsCache.ts';
-import { TtsError, sameOriginRequest, voicevoxQueued, VOICEVOX_QUEUE_MAX } from '../../../server/tts.ts';
-import { createVoicevoxProcess, type VoicevoxProcessDeps } from '../../../server/voicevoxProcess.ts';
+import { sameOriginRequest } from '../../../server/tts.ts';
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'mugi-tutor-guard-')); });
@@ -183,48 +182,6 @@ describe('daily spending cap', () => {
   });
 });
 
-describe('VOICEVOX start without VOICEVOX_DIR', () => {
-  function deps(dirValue: string, exists: (p: string) => boolean = () => true): VoicevoxProcessDeps & { spawn: ReturnType<typeof vi.fn> } {
-    // a fake clock: the background wait for the engine advances it, so it ends after the 60 s limit
-    let t = 0;
-    return {
-      dir: () => dirValue,
-      root: 'C:\\no-such-project',
-      subfolders: () => [],
-      base: () => 'http://127.0.0.1:50021',
-      fetch: vi.fn(async () => { throw new Error('connection refused'); }) as unknown as typeof fetch,
-      spawn: vi.fn(() => ({ on: () => undefined, unref: () => undefined })),
-      exists,
-      portOwner: async () => null,
-      kill: vi.fn(),
-      now: () => t,
-      sleep: async (ms: number) => { t += ms; },
-      log: () => undefined,
-      sameOrigin: sameOriginRequest,
-    };
-  }
-
-  it('refuses to start with a message that names VOICEVOX_DIR, and spawns nothing', async () => {
-    const d = deps('', () => false);
-    const ctl = createVoicevoxProcess(d);
-    await expect(ctl.start()).rejects.toMatchObject({ status: 404, code: 'no_engine' });
-    await expect(ctl.start()).rejects.toThrow(/VOICEVOX_DIR/);
-    expect(d.spawn).not.toHaveBeenCalled();
-  });
-
-  it('starts when a folder is set', async () => {
-    const d = deps('C:\\voicevox_engine');
-    const ctl = createVoicevoxProcess(d);
-    await expect(ctl.start()).resolves.toMatchObject({ running: false, starting: true });
-    expect(d.spawn).toHaveBeenCalledTimes(1);
-  });
-
-  it('status still answers without a folder', async () => {
-    const ctl = createVoicevoxProcess(deps(''));
-    await expect(ctl.status()).resolves.toEqual({ running: false, starting: false });
-  });
-});
-
 describe('speech memory cache: byte cap', () => {
   it('the default cap is 32 MB', () => {
     expect(TTS_CACHE_MEM_MAX_BYTES).toBe(32 * 1024 * 1024);
@@ -260,26 +217,5 @@ describe('speech memory cache: byte cap', () => {
     expect(c.peek('a')).toBeUndefined();
     expect(c.memoryBytes()).toBe(20);
     await c.settle();
-  });
-});
-
-describe('VOICEVOX synthesis queue limit', () => {
-  it('refuses with 429 once VOICEVOX_QUEUE_MAX syntheses are waiting or running', async () => {
-    expect(VOICEVOX_QUEUE_MAX).toBe(8);
-    // each job waits on its own gate; the jobs run one after another, so all eight are queued at once
-    const gates = Array.from({ length: VOICEVOX_QUEUE_MAX }, () => {
-      let open!: (b: Buffer) => void;
-      const p = new Promise<Buffer>((resolve) => { open = resolve; });
-      return { p, open };
-    });
-    const jobs = gates.map((g) => voicevoxQueued(() => g.p));
-    const extra = voicevoxQueued(async () => Buffer.alloc(1));
-    await expect(extra).rejects.toBeInstanceOf(TtsError);
-    await expect(extra).rejects.toMatchObject({ status: 429, code: 'busy' });
-
-    // once the queue drains, a new request is accepted again
-    for (const g of gates) g.open(Buffer.alloc(1));
-    await Promise.all(jobs);
-    await expect(voicevoxQueued(async () => Buffer.alloc(2))).resolves.toEqual(Buffer.alloc(2));
   });
 });

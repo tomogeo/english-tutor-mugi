@@ -1,4 +1,4 @@
-// 日語家教 (the tutor mode): a pure Japanese chat with a 2D portrait of the active character (人物: むぎ the hamster, 結衣, 悠真, or one
+// 英語家教 (the tutor mode): an English chat with a 2D portrait of the active character (人物: Mugi the hamster, Lily, Ethan, or one
 // the player added). The replies come from Claude in teacher mode (game/claudeBrain askClaude); the chat, the 小提醒 and the notebook,
 // 速查, the mic and the voice loop are the shared pieces. Settings live under their own key (game/tutor.ts); each character has its
 // own chat history and picture, and her voice (game/characterVoice) is handed to the speech queue.
@@ -29,10 +29,10 @@ import { loadBackgroundPicture, useBackgroundUrl } from '../game/tutorBackground
 import { playMusic, stopMusic } from '../game/audio';
 import { LookupSheet } from './LookupSheet';
 import { TipsSheet } from './TipsSheet';
-import { AiServiceSection, BackgroundSection, BudgetSection, ChatDataSection, CloudKeysSection, CustomArtSection, FigureSection, ModelSection, PersonaSection, SettingsSheet, SoundSection, UsageSection, useSoundSettings } from './SettingsSections';
+import { AiServiceSection, BackgroundSection, BudgetSection, ChatDataSection, LearningSection, CloudKeysSection, CustomArtSection, FigureSection, ModelSection, PersonaSection, SettingsSheet, SoundSection, UsageSection, useSoundSettings } from './SettingsSections';
 import { loadCustomArt, clearCustomArt, customPortraitOf, filePortrait, useArtUrls, type CustomArt, type CustomPortrait } from '../game/customArt';
 import { LookupButton, TipsButton, useTipStat } from './StudyButtons';
-import { rubyNodes } from './Furigana';
+import { hideGloss } from '../game/gloss';
 import { joinDictation } from './dictation';
 import { useIOSKeyboard } from './useIOSKeyboard';
 import { useDictationScroll } from './useDictationScroll';
@@ -57,11 +57,11 @@ const GENDER_LABEL = { female: '女聲', male: '男聲' } as const;
 /** the 聲音 row's value of a voice: 跟隨設定頁, a gender (the engine's own voice of it), or one listed voice */
 function voiceValueOf(v: CharacterVoice): string {
   if (!v) return '';
-  if (v.ja) return `voice:${v.ja}`;
+  if (v.en) return `voice:${v.en}`;
   return `auto:${v.gender ?? 'female'}`;
 }
 
-/** 日語家教 screen: the whole app (there is no menu to go back to). */
+/** 英語家教 screen: the whole app (there is no menu to go back to). */
 export default function TutorView() {
   const [settings, setSettings] = useState<TutorSettings>(loadTutor);
   const active: Character = activeCharacter(settings);
@@ -80,7 +80,7 @@ export default function TutorView() {
   const customArt = arts[activeId] ?? null;
   const customUrls = useArtUrls(customArt);
   const customPicture = useMemo(() => customPortraitOf(customArt, customUrls), [customArt, customUrls]);
-  // 結衣 and 悠真 have built-in pictures (open and closed); むぎ's are the overlays; an added character with none is a silhouette
+  // Lily and Ethan have built-in pictures (open and closed); Mugi's are the overlays; an added character with none is a silhouette
   const builtinPicture = useMemo<CustomPortrait | null>(() => {
     if (!builtin || builtin.picture === 'hamster') return null;
     const dir = tutorArtDir(builtin.artDir);
@@ -175,12 +175,12 @@ export default function TutorView() {
   // her replies are voiced through the reply bus while she is on screen (game/tts)
   useEffect(() => startSpeakingReplies(), []);
   useEffect(() => () => stopSpeaking(), []);
-  // her voice (人物 › 聲音): the speech queue speaks her Japanese lines with it; the 設定 page's voice when none is chosen
-  const jaEngine = tts.ja.engine;
+  // her voice (人物 › 聲音): the speech queue speaks her English lines with it; the 設定 page's voice when none is chosen
+  const enEngine = tts.en.engine;
   useEffect(() => {
-    setSpeakerVoice(speakPlanFor(active.voice, jaEngine, (e) => cloudVoiceList(e, 'ja')));
+    setSpeakerVoice(speakPlanFor(active.voice, enEngine, (e) => cloudVoiceList(e, 'en')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active.voice, jaEngine, cloud]);
+  }, [active.voice, enEngine, cloud]);
   useEffect(() => () => setSpeakerVoice(null), []);
   // the background music (the tutor's own track, public/audio/bgm.mp3; silent when the file is missing)
   useEffect(() => { playMusic(); return () => stopMusic(); }, []);
@@ -205,6 +205,8 @@ export default function TutorView() {
   useEffect(() => { if (!note) return; const id = setTimeout(() => setNote(''), LEVEL_NOTE_MS); return () => clearTimeout(id); }, [note]);
 
   const sttLang = settings.sttLang;
+  /** her line as shown: with or without the Chinese meaning in brackets (設定 › 中文翻譯) */
+  const herText = (t: string): string => (settings.showGloss ? t : hideGloss(t));
   // a reply can come from any chosen service that is ready (Claude with its key, ChatGPT signed in with the plan)
   const ready = serviceReady(settings.providers, { anthropic: !!claude?.ok, openai: !!chatgpt?.signedIn && !!chatgpt.planEnabled });
   // her personality as it is sent, and the key that covers it with her name (a change of either starts the request window over)
@@ -228,12 +230,12 @@ export default function TutorView() {
       const { reply: c } = await replyWithFallback(fallbackChain(), { history, situation: ctx, mode: 'teacher', role: CHAT_ROLE, onDelta: (t) => setStreamText(t) });
       setStreamText('');
       const tipT = Date.now();
-      const tipEntry = c.tip ? addTip({ text: c.tip, targets: c.tipJa ?? [], said: text, role: CHAT_ROLE }) : null;
+      const tipEntry = c.tip ? addTip({ text: c.tip, targets: c.tipEn ?? [], said: text, role: CHAT_ROLE }) : null;
       // her line keeps the reply as it is sent back to Claude (its JSON, tip left out: sent)
       const her: ChatLine = { from: 'her', text: c.text, t: Date.now(), sent: c.sent, pk: key };
       const tipLine: ChatLine[] = c.tip ? [{ from: 'her', text: c.tip, t: tipT, tip: true, pk: key }] : [];
       setChat((cur) => [...cur, her, ...tipLine].slice(-TUTOR_CHAT_KEEP));
-      // a tip with Japanese prose is shown as it is, then rewritten in the background
+      // a tip in English (when Chinese was asked for) is shown as it is, then rewritten in the background
       if (c.tip && c.tipRewrite && c.tipRaw) {
         const oldText = c.tip, entryId = tipEntry?.id;
         void reviseTip(c.tipRaw, TIP_REVISE_TIMEOUT_MS, settings.helperModel, aiServicesOf(settings)).then((fixed) => {
@@ -272,7 +274,7 @@ export default function TutorView() {
     void send(t);
   };
 
-  /** tap her bubble / line: she says it again (her Japanese only; tips are never said) */
+  /** tap her bubble / line: she says it again (her English only; tips are never said) */
   const replay = (line: ChatLine) => {
     const text = replayText({ from: line.from, text: line.text, tip: line.tip });
     if (text === null || !tts.on) return;
@@ -280,12 +282,12 @@ export default function TutorView() {
     speakReply(text);
   };
 
-  /** 換她開話題: a Japanese pocket topic (game/pocketTopics, no API). Claude later sees the Japanese in <ja> with its Chinese (`sent`) */
+  /** 換她開話題: an English pocket topic (game/pocketTopics, no API). Claude later sees the English with its Chinese (`sent`) */
   const openTopic = () => {
     stopSpeaking();
     const t = nextPocketTopic();
     const key = personaKey(persona, name);
-    const line: ChatLine = { from: 'her', text: `${t.ja}（${t.jaZh}）`, t: Date.now(), sent: topicSent(t.ja, t.jaZh), topic: true, pk: key };
+    const line: ChatLine = { from: 'her', text: `${t.en}（${t.zh}）`, t: Date.now(), sent: topicSent(t.en, t.zh), topic: true, pk: key };
     setChat((cur) => markPersonaReset([...cur, line], key).slice(-TUTOR_CHAT_KEEP));
     const spoken = replayText({ from: line.from, text: line.text });
     if (spoken !== null && tts.on) speakReply(spoken);
@@ -355,8 +357,8 @@ export default function TutorView() {
   const setVoiceValue = (value: string) => {
     if (value === '') { patchActive({ voice: null }); return; }
     if (value.startsWith('auto:')) { patchActive({ voice: { gender: value.slice(5) === 'male' ? 'male' : 'female' } }); return; }
-    if (value.startsWith('voice:') && jaEngine !== 'browser') {
-      patchActive({ voice: { engine: jaEngine, ja: value.slice(6), gender: active.voice?.gender ?? 'female' } });
+    if (value.startsWith('voice:') && enEngine !== 'browser') {
+      patchActive({ voice: { engine: enEngine, en: value.slice(6), gender: active.voice?.gender ?? 'female' } });
     }
   };
   /** a background was added (its picture is stored by the section): it is the one in use */
@@ -377,8 +379,8 @@ export default function TutorView() {
     setSheet(s);
   };
 
-  // the 聲音 choices: the 設定 page's engine's Japanese voices (none for the device voice)
-  const voiceOptions = jaEngine === 'browser' ? [] : cloudVoiceList(jaEngine, 'ja');
+  // the 聲音 choices: the 設定 page's engine's English voices (none for the device voice)
+  const voiceOptions = enEngine === 'browser' ? [] : cloudVoiceList(enEngine, 'en');
   const defaultPersona = activeId === 'mugi' ? claude?.personas?.Mugi ?? '' : defaultPersonaOf(activeId);
   const subtitleFallback = builtin?.subtitle ?? TUTOR_NEW_SUBTITLE;
   const artDefaultLabel = activeId === 'mugi' ? '預設倉鼠' : builtin ? '內建圖片' : '預設剪影';
@@ -431,7 +433,7 @@ export default function TutorView() {
         {!classroom && portrait}
         {bubble && !chatOpen && (
           <div className="tutor-bubble" onClick={lastHer && !streamText ? () => replay(lastHer) : undefined}>
-            <b>{name}</b><span className="tutor-bubble-text">{rubyNodes(bubble)}</span>
+            <b>{name}</b><span className="tutor-bubble-text">{herText(bubble)}</span>
           </div>
         )}
       </div>
@@ -451,20 +453,20 @@ export default function TutorView() {
           chatOpen={chatOpen} onToggleChat={setChatOpen}
           historyRef={historyRef}
           history={<>
-            {chat.length === 0 && <li className="as-hint">跟{name}練習日語吧～ 用日文或中文說都可以。</li>}
+            {chat.length === 0 && <li className="as-hint">跟{name}練習英語吧～ 用英文或中文說都可以。</li>}
             {chat.map((c, i) => c.tip
-              ? <li key={`${c.t}-${i}`} className="her tip"><span className="as-tip-label">小提醒</span>{rubyNodes(c.text)}</li>
-              : <li key={`${c.t}-${i}`} className={c.from} onClick={c.from === 'her' ? () => replay(c) : undefined}>{rubyNodes(c.text)}</li>)}
-            {streamText && <li className="her">{rubyNodes(streamText)}</li>}
+              ? <li key={`${c.t}-${i}`} className="her tip"><span className="as-tip-label">小提醒</span>{c.text}</li>
+              : <li key={`${c.t}-${i}`} className={c.from} onClick={c.from === 'her' ? () => replay(c) : undefined}>{c.from === 'her' ? herText(c.text) : c.text}</li>)}
+            {streamText && <li className="her">{herText(streamText)}</li>}
           </>}
           notes={[
             !ready && claude !== null && '需要 AI 服務：請到設定的「AI 服務」設定 Claude 金鑰，或登入 ChatGPT',
-            note || voice.note || (mic.listening ? `聆聽中…（${sttLang === 'ja-JP' ? '日文' : '中文'}）` : ''),
+            note || voice.note || (mic.listening ? `聆聽中…（${sttLang === 'en-US' ? '英文' : '中文'}）` : ''),
           ]}
           pill={voice.active ? { phase: voice.phase, label: VOICE_LABEL[voice.phase], onStop: voice.stop } : undefined}
           stt={{
             lang: sttLang, title: '語音辨識的語言',
-            onToggle: () => { const next = sttLang === 'ja-JP' ? 'zh-TW' : 'ja-JP'; setPrefs({ sttLang: next as TutorSettings['sttLang'] }); },
+            onToggle: () => { const next = sttLang === 'en-US' ? 'zh-TW' : 'en-US'; setPrefs({ sttLang: next as TutorSettings['sttLang'] }); },
           }}
           voice={{ active: voice.active, disabled: !voice.supported || !ready, onToggle: () => { if (ready) voice.toggle(); } }}
           mic={{
@@ -503,7 +505,7 @@ export default function TutorView() {
           <CustomArtSection key={`art:${activeId}`} theme="dark" art={customArt} characterId={activeId} defaultLabel={artDefaultLabel}
             onChange={(a) => setArts((m) => ({ ...m, [activeId]: a }))} />
           <h3>聲音</h3>
-          <label className="as-row"><span>這個角色的聲音<small>{jaEngine === 'browser' ? '設定頁是手機內建語音，沒有可選的聲音' : `設定頁的日文引擎：${jaEngine}`}</small></span>
+          <label className="as-row"><span>這個角色的聲音<small>{enEngine === 'browser' ? '設定頁是裝置內建語音，沒有可選的聲音' : `設定頁的英文引擎：${enEngine}`}</small></span>
             <select aria-label="聲音" value={voiceValueOf(active.voice)} onChange={(e) => setVoiceValue(e.currentTarget.value)}>
               <option value="">跟隨設定頁</option>
               <option value="auto:female">女聲（依設定頁的引擎自動選）</option>
@@ -511,7 +513,7 @@ export default function TutorView() {
               {voiceOptions.map((v) => <option key={v.id} value={`voice:${v.id}`}>{v.label}</option>)}
             </select>
           </label>
-          {jaEngine === 'browser' && <div className="as-lang-note as-voice-note"><small>男聲在內建語音上會把音調降低一些（{GENDER_LABEL.male}）。</small></div>}
+          {enEngine === 'browser' && <div className="as-lang-note as-voice-note"><small>男聲在內建語音上會把音調降低一些（{GENDER_LABEL.male}）。</small></div>}
           {(keepsView) && <FigureSection theme="dark" onReset={resetFigure} />}
           {!isBuiltinId(activeId) && (
             <div className="as-char-del">
@@ -526,7 +528,8 @@ export default function TutorView() {
       )}
       {sheet === 'settings' && (
         <SettingsSheet theme="dark" onClose={() => setSheet(null)}>
-          {/* the shared 聲音 section; 日語家教 has no sound effects, so its volume rows are 音樂 and 語音 */}
+          <LearningSection tipLang={settings.tipLang} showGloss={settings.showGloss} onChange={(patch) => setPrefs(patch)} />
+          {/* the shared 聲音 section; 英語家教 has no sound effects, so its volume rows are 音樂 and 語音 */}
           <SoundSection audio={audio} tts={tts} cloud={cloud} volumes={['music', 'voice']} />
           <CloudKeysSection onSaved={keysSaved} />
           <AiServiceSection theme="dark" providers={settings.providers} openaiModel={settings.openaiModel}

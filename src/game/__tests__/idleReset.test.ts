@@ -18,7 +18,7 @@ function tip(text: string, t: number): ChatLine {
   return { from: 'her', text, t, tip: true };
 }
 function topic(text: string, t: number): ChatLine {
-  return { from: 'her', text, t, sent: `<ja>${text}</ja>`, topic: true };
+  return { from: 'her', text, t, sent: `<en>${text}</en>`, topic: true };
 }
 /** alternating me / her lines, the newest one at time `last` */
 function alternating(n: number, last: number): ChatLine[] {
@@ -85,7 +85,7 @@ describe('markIdleReset', () => {
     expect(winIndexes(flagged)).toEqual([1]);
     const messages = toApiMessages(markWindowReset([...flagged, me('新句子', NOW)]));
     expect(messages[0]).toEqual({ role: 'user', content: 'L0' });
-    expect(messages.some((m) => m.content.includes('<ja>TOPIC</ja>'))).toBe(true);
+    expect(messages.some((m) => m.content.includes('<en>TOPIC</en>'))).toBe(true);
     expect(messages.some((m) => m.content.includes('p0'))).toBe(false);
   });
 
@@ -127,8 +127,8 @@ describe('isTopicLine', () => {
     expect(isTopicLine({ from: 'her', text: 'x', t: NOW, topic: true })).toBe(true);
   });
 
-  it('is true for an old-format 開話題 line (her, sent starting with <ja>, not a tip)', () => {
-    expect(isTopicLine({ from: 'her', text: 'x', t: NOW, sent: '<ja>x</ja>（x）' })).toBe(true);
+  it('is true for an old-format 開話題 line (her, sent starting with <en>, not a tip)', () => {
+    expect(isTopicLine({ from: 'her', text: 'x', t: NOW, sent: '<en>x</en>（x）' })).toBe(true);
   });
 
   it('is false for her ordinary reply (no sent)', () => {
@@ -137,7 +137,7 @@ describe('isTopicLine', () => {
 
   it('is false for a tip line', () => {
     expect(isTopicLine(tip('小提醒', NOW))).toBe(false);
-    expect(isTopicLine({ from: 'her', text: 'x', t: NOW, tip: true, sent: '<ja>x</ja>' })).toBe(false);
+    expect(isTopicLine({ from: 'her', text: 'x', t: NOW, tip: true, sent: '<en>x</en>' })).toBe(false);
   });
 
   it('CHAT_IDLE_RESET_MS is one hour', () => {
@@ -168,15 +168,15 @@ describe('personaKey', () => {
   });
 
   it('covers her name too: a changed name is a changed key, even with the same personality', () => {
-    expect(personaKey('溫柔的老師', 'ミオ')).not.toBe(personaKey('溫柔的老師', 'むぎ'));
-    expect(personaKey(undefined, 'ミオ')).not.toBe(personaKey(undefined, 'むぎ'));
+    expect(personaKey('溫柔的老師', 'ミオ')).not.toBe(personaKey('溫柔的老師', 'Mugi'));
+    expect(personaKey(undefined, 'ミオ')).not.toBe(personaKey(undefined, 'Mugi'));
     expect(personaKey(undefined, 'ミオ')).not.toBe('');
     expect(personaKey('溫柔的老師', 'ミオ')).toBe(personaKey('溫柔的老師', '  ミオ  '));
   });
 
   it('the default name keeps the persona-only key, so chats under the default name are not restarted', () => {
-    expect(personaKey(undefined, 'むぎ')).toBe('');
-    expect(personaKey('溫柔的老師', 'むぎ')).toBe(personaKey('溫柔的老師'));
+    expect(personaKey(undefined, 'Mugi')).toBe('');
+    expect(personaKey('溫柔的老師', 'Mugi')).toBe(personaKey('溫柔的老師'));
     expect(personaKey('溫柔的老師', undefined)).toBe(personaKey('溫柔的老師'));
   });
 });

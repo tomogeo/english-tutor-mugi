@@ -39,17 +39,18 @@ describe('voice mapping', () => {
     expect(googleVoiceFor('cmn-TW-Wavenet-A', 'standard')?.id).toBe('cmn-TW-Standard-A');
     // no cmn-CN Standard voice in the allowlist: the same language family's Standard voice is the closest
     expect(googleVoiceFor('cmn-CN-Wavenet-D', 'standard')?.id).toBe('cmn-TW-Standard-A');
-    expect(googleVoiceFor('ja-JP-Neural2-B', 'wavenet')?.id).toBe('ja-JP-Wavenet-B');
+    expect(googleVoiceFor('en-US-Neural2-F', 'wavenet')?.id).toBe('en-US-Wavenet-F');
   });
 
-  it('has no Japanese Standard voice, so a Japanese Neural2 request has no Standard option', () => {
-    expect(googleVoiceFor('ja-JP-Neural2-B', 'standard')).toBeUndefined();
+  it('an English Neural2 voice maps to the English Standard voice of the same letter', () => {
+    expect(googleVoiceFor('en-US-Neural2-F', 'standard')?.id).toBe('en-US-Standard-F');
+    expect(googleVoiceFor('en-US-Neural2-D', 'standard')?.id).toBe('en-US-Standard-D');
   });
 
   it('maps any voice to an Azure voice of the same locale, else the same language', () => {
     expect(azureVoiceFor('cmn-TW-Wavenet-A')?.id).toBe('zh-TW-HsiaoChenNeural');
     expect(azureVoiceFor('cmn-CN-Wavenet-A')?.id).toBe('zh-CN-XiaoxiaoNeural');
-    expect(azureVoiceFor('ja-JP-Neural2-B')?.id).toBe('ja-JP-NanamiNeural');
+    expect(azureVoiceFor('en-US-Neural2-F')?.id).toBe('en-US-AvaNeural');
     expect(azureVoiceFor('en-US-Chirp3-HD-Aoede')).toBeUndefined();
   });
 });
@@ -62,16 +63,22 @@ describe('planTts: the requested tier while it is within 90%', () => {
 });
 
 describe('planTts: fallback order', () => {
-  it('Neural2 past 90% goes to WaveNet first (ja), then Azure when configured', () => {
+  it('Neural2 past 90% goes to WaveNet first (en), then Standard, then Azure when configured', () => {
     const used = usedFrom({ 'google:neural2': 950_000 });
-    const p = planTts(body('google', 'ja-JP-Neural2-B', 'こんにちは'), 5, used, true);
-    expect(p).toEqual({ kind: 'use', engine: 'google', voice: 'ja-JP-Wavenet-B', requestedTier: 'neural2', fallback: true });
+    const p = planTts(body('google', 'en-US-Neural2-F', 'Hello there'), 5, used, true);
+    expect(p).toEqual({ kind: 'use', engine: 'google', voice: 'en-US-Wavenet-F', requestedTier: 'neural2', fallback: true });
   });
 
-  it('when the WaveNet option is also past 90%, Azure is next', () => {
+  it('when the WaveNet option is also past 90%, the Standard voice is next', () => {
     const used = usedFrom({ 'google:neural2': 950_000, 'google:wavenet': 3_700_000 });
-    const p = planTts(body('google', 'ja-JP-Neural2-B', 'こんにちは'), 5, used, true);
-    expect(p).toEqual({ kind: 'use', engine: 'azure', voice: 'ja-JP-NanamiNeural', requestedTier: 'neural2', fallback: true });
+    const p = planTts(body('google', 'en-US-Neural2-F', 'Hello there'), 5, used, true);
+    expect(p).toEqual({ kind: 'use', engine: 'google', voice: 'en-US-Standard-F', requestedTier: 'neural2', fallback: true });
+  });
+
+  it('when the WaveNet and Standard options are also past 90%, Azure is next', () => {
+    const used = usedFrom({ 'google:neural2': 950_000, 'google:wavenet': 3_700_000, 'google:standard': 3_700_000 });
+    const p = planTts(body('google', 'en-US-Neural2-F', 'Hello there'), 5, used, true);
+    expect(p).toEqual({ kind: 'use', engine: 'azure', voice: 'en-US-AvaNeural', requestedTier: 'neural2', fallback: true });
   });
 
   it('a Chinese WaveNet past 90% goes to the Standard voice of the same locale', () => {
@@ -95,7 +102,7 @@ describe('planTts: fallback order', () => {
 describe('planTts: Azure not configured and the browser', () => {
   it('with Azure unconfigured, a fully used Neural2 goes to the browser', () => {
     const used = usedFrom({ 'google:neural2': 950_000, 'google:wavenet': 3_700_000, 'google:standard': 3_700_000 });
-    expect(planTts(body('google', 'ja-JP-Neural2-B'), 5, used, false)).toEqual({ kind: 'browser', requestedTier: 'neural2' });
+    expect(planTts(body('google', 'en-US-Neural2-F'), 5, used, false)).toEqual({ kind: 'browser', requestedTier: 'neural2' });
   });
 
   it('with Azure over 90% too, it also goes to the browser', () => {
@@ -120,11 +127,11 @@ describe('month reset', () => {
       s.recordTts({ engine: 'google', tier: 'neural2' }, { ok: true, chars: 990_000 });
       expect(s.ttsUsed('google', 'neural2')).toBe(990_000);
       // 990,000 of 1,000,000 is past 90%: this month the request already falls to WaveNet
-      expect(planTts(body('google', 'ja-JP-Neural2-B'), 5, (e, t) => s.ttsUsed(e, t), false)).toMatchObject({ kind: 'use', voice: 'ja-JP-Wavenet-B', fallback: true });
+      expect(planTts(body('google', 'en-US-Neural2-F'), 5, (e, t) => s.ttsUsed(e, t), false)).toMatchObject({ kind: 'use', voice: 'en-US-Wavenet-F', fallback: true });
       now = new Date(2026, 1, 1, 0, 5);
       expect(s.ttsUsed('google', 'neural2')).toBe(0);
-      expect(planTts(body('google', 'ja-JP-Neural2-B'), 5, (e, t) => s.ttsUsed(e, t), false)).toEqual({
-        kind: 'use', engine: 'google', voice: 'ja-JP-Neural2-B', requestedTier: 'neural2', fallback: false,
+      expect(planTts(body('google', 'en-US-Neural2-F'), 5, (e, t) => s.ttsUsed(e, t), false)).toEqual({
+        kind: 'use', engine: 'google', voice: 'en-US-Neural2-F', requestedTier: 'neural2', fallback: false,
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -201,7 +208,7 @@ describe('Neural2 is counted conservatively', () => {
     const text = 'こんにちは'; // 15 bytes for Neural2, 5 characters for WaveNet
     // Neural2 at 899,990: + 5 chars would fit under 900,000, + 15 bytes does not → falls back to WaveNet
     const used = (e: string, t: string) => (e === 'google' && t === 'neural2' ? 899_990 : 0);
-    const p = planTts({ engine: 'google', voice: 'ja-JP-Neural2-B', text, rate: 1, pitch: 1 }, (e, t) => billedChars(text, e, t), used, false);
+    const p = planTts({ engine: 'google', voice: 'en-US-Neural2-F', text, rate: 1, pitch: 1 }, (e, t) => billedChars(text, e, t), used, false);
     expect(p).toMatchObject({ kind: 'use', fallback: true });
   });
 });

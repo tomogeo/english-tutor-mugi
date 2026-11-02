@@ -5,7 +5,7 @@ import {
   selectCharacter, TUTOR_BACKGROUNDS_MAX, TUTOR_CHARACTERS_MAX, cleanTutorName, TUTOR_NAME_MAX, DEFAULT_TUTOR, tutorChatKey,
 } from '../game/tutor';
 import { cleanBackgroundDim, cleanBackgroundId, DIM_MAX } from '../game/tutorScene';
-import { cleanCharacterVoice, speakPlanFor, BROWSER_MALE_PITCH, CLOUD_JA_VOICES, genderVoiceId } from '../game/characterVoice';
+import { cleanCharacterVoice, speakPlanFor, BROWSER_MALE_PITCH, CLOUD_EN_VOICES, genderVoiceId } from '../game/characterVoice';
 import { findVoice, TTS_VOICES, googleVoiceFor } from '../../server/tts';
 import { DEFAULT_PROVIDERS } from '../game/claudeProtocol';
 
@@ -26,13 +26,13 @@ describe('old saves load without crashing', () => {
 
   it('an unknown field and a wrong-typed field are ignored, the rest is kept', () => {
     const s = migrateTutor({ scheme: 'dark', sttLang: 'fr-FR', providers: ['google'], background: 42, backgroundDim: 'x' });
-    expect(s.sttLang).toBe('ja-JP');
+    expect(s.sttLang).toBe('en-US');
     expect(s.providers).toEqual(DEFAULT_PROVIDERS);
     expect(s.background).toBe('classroom');
   });
 
   it('a save with the characters list missing one built-in gets it back', () => {
-    const s = migrateTutor({ characters: [{ id: 'yui', name: '結衣' }] });
+    const s = migrateTutor({ characters: [{ id: 'yui', name: 'Lily' }] });
     expect(s.characters.map((c) => c.id)).toEqual(['mugi', 'yui', 'yuma']);
   });
 
@@ -100,7 +100,7 @@ describe('deleting the active one', () => {
 
   it('deleting a character leaves its chat history key behind (the caller clears it)', () => {
     // TutorView clears clearTutorChat(activeId) on delete; the key must match what was written
-    expect(tutorChatKey('c1')).toBe('mugi.tutor.chat.v1.c1');
+    expect(tutorChatKey('c1')).toBe('mugien.tutor.chat.v1.c1');
   });
 
   it('deleting the active background puts the classroom back', () => {
@@ -126,7 +126,7 @@ describe('names and persona', () => {
   });
 
   it('a whitespace-only name falls back to the default', () => {
-    expect(cleanTutorName('   ')).toBe('むぎ');
+    expect(cleanTutorName('   ')).toBe('Mugi');
   });
 
   it('a name with a newline keeps the newline in the saved name (only trimmed)', () => {
@@ -140,7 +140,7 @@ describe('names and persona', () => {
 
   it('an added character has the neutral personality until she gets her own', () => {
     const s = addCharacter(DEFAULT_TUTOR, 'c9')!;
-    expect(effectivePersona(activeCharacter(s))).toContain('日語家教');
+    expect(effectivePersona(activeCharacter(s))).toContain('英語家教');
   });
 });
 
@@ -157,27 +157,28 @@ describe('backgrounds (cleaning)', () => {
 
 describe('voices per character', () => {
   it('male Japanese voices are in the server allowlists', () => {
-    expect(findVoice('azure', 'ja-JP-KeitaNeural')?.label).toContain('男聲');
-    expect(findVoice('azure', 'ja-JP-DaichiNeural')).toBeDefined();
-    expect(findVoice('google', 'ja-JP-Neural2-C')).toBeDefined();
-    expect(findVoice('google', 'ja-JP-Neural2-D')).toBeDefined();
-    expect(findVoice('google', 'ja-JP-Wavenet-C')).toBeDefined();
+    expect(findVoice('azure', 'en-US-AndrewNeural')?.label).toContain('男聲');
+    expect(findVoice('azure', 'en-US-BrianNeural')).toBeDefined();
+    expect(findVoice('google', 'en-US-Neural2-D')).toBeDefined();
+    expect(findVoice('google', 'en-US-Neural2-D')).toBeDefined();
+    expect(findVoice('google', 'en-US-Wavenet-D')).toBeDefined();
   });
 
   it('the built-in gender defaults are in the allowlist', () => {
-    expect(findVoice('azure', CLOUD_JA_VOICES.azure.male)).toBeDefined();
-    expect(findVoice('google', CLOUD_JA_VOICES.google.male)).toBeDefined();
-    expect(findVoice('google', CLOUD_JA_VOICES.google.female)).toBeDefined();
+    expect(findVoice('azure', CLOUD_EN_VOICES.azure.male)).toBeDefined();
+    expect(findVoice('google', CLOUD_EN_VOICES.google.male)).toBeDefined();
+    expect(findVoice('google', CLOUD_EN_VOICES.google.female)).toBeDefined();
   });
 
   it('an unknown voice id and a voice of the other engine are refused (not in the allowlist)', () => {
-    expect(findVoice('azure', 'ja-JP-Fake')).toBeUndefined();
-    expect(findVoice('azure', 'ja-JP-Neural2-C')).toBeUndefined();
-    expect(findVoice('google', 'ja-JP-KeitaNeural')).toBeUndefined();
+    expect(findVoice('azure', 'en-US-Fake')).toBeUndefined();
+    expect(findVoice('azure', 'en-US-Neural2-D')).toBeUndefined();
+    expect(findVoice('google', 'en-US-AndrewNeural')).toBeUndefined();
   });
 
-  it('Google falls back to a WaveNet Japanese voice for Neural2 (no Standard ja voice)', () => {
-    expect(googleVoiceFor('ja-JP-Neural2-B', 'Standard')?.id).not.toBe('ja-JP-Neural2-B');
+  it('Google maps an English Neural2 voice to the WaveNet and Standard voices of the same letter', () => {
+    expect(googleVoiceFor('en-US-Neural2-F', 'wavenet')?.id).toBe('en-US-Wavenet-F');
+    expect(googleVoiceFor('en-US-Neural2-F', 'standard')?.id).toBe('en-US-Standard-F');
   });
 
   it('a male character with the device voice gets the lower pitch', () => {
@@ -185,29 +186,29 @@ describe('voices per character', () => {
   });
 
   it('a male character on Azure gets the male Azure voice', () => {
-    expect(speakPlanFor({ gender: 'male' }, 'azure', () => [])).toEqual({ kind: 'cloud', engine: 'azure', voice: 'ja-JP-KeitaNeural' });
+    expect(speakPlanFor({ gender: 'male' }, 'azure', () => [])).toEqual({ kind: 'cloud', engine: 'azure', voice: 'en-US-AndrewNeural' });
   });
 
-  it('VOICEVOX male: no speaker offered means no plan (the 設定 voice speaks)', () => {
-    expect(genderVoiceId('voicevox', 'male', [])).toBeNull();
-    expect(speakPlanFor({ engine: 'voicevox', gender: 'male' }, 'browser', () => [])).toBeNull();
+  it('the gender voices of both engines are fixed English voices', () => {
+    expect(genderVoiceId('azure', 'male', [])).toBe('en-US-AndrewNeural');
+    expect(genderVoiceId('google', 'female', [])).toBe('en-US-Neural2-F');
   });
 
   it('a voice id with odd characters is not kept', () => {
-    expect(cleanCharacterVoice({ ja: '../../etc' })).toBeNull();
-    expect(cleanCharacterVoice({ ja: 'ja-JP-KeitaNeural', engine: 'nope' })).toEqual({ ja: 'ja-JP-KeitaNeural' });
+    expect(cleanCharacterVoice({ en: '../../etc' })).toBeNull();
+    expect(cleanCharacterVoice({ en: 'en-US-AndrewNeural', engine: 'nope' })).toEqual({ en: 'en-US-AndrewNeural' });
   });
 
   it('TTS_VOICES lists are non-empty for azure and google', () => {
-    expect(TTS_VOICES.azure.ja.length).toBeGreaterThan(0);
-    expect(TTS_VOICES.google.ja.length).toBeGreaterThan(0);
+    expect(TTS_VOICES.azure.en.length).toBeGreaterThan(0);
+    expect(TTS_VOICES.google.en.length).toBeGreaterThan(0);
   });
 
-  it('a Japanese voice of another engine saved on a character is accepted client-side when that engine list is still empty', () => {
+  it('an English voice of another engine saved on a character is accepted client-side when that engine list is still empty', () => {
     // speakPlanFor: an empty (not yet loaded) list accepts any id; the server then refuses an id outside its own list
-    const plan = speakPlanFor({ engine: 'google', ja: 'ja-JP-KeitaNeural' }, 'browser', () => []);
-    expect(plan).toEqual({ kind: 'cloud', engine: 'google', voice: 'ja-JP-KeitaNeural' });
-    expect(findVoice('google', 'ja-JP-KeitaNeural')).toBeUndefined();
+    const plan = speakPlanFor({ engine: 'google', en: 'en-US-AndrewNeural' }, 'browser', () => []);
+    expect(plan).toEqual({ kind: 'cloud', engine: 'google', voice: 'en-US-AndrewNeural' });
+    expect(findVoice('google', 'en-US-AndrewNeural')).toBeUndefined();
   });
 
   it('selectCharacter with an unknown id changes nothing', () => {

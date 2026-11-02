@@ -1,6 +1,6 @@
 /**
  * The text of a dictation: the text the input had when dictation started (or after the last final text) followed by the
- * recognised text. A single space goes between two Latin words or digits; CJK / Japanese text is joined without a space.
+ * recognised text. A single space goes between two Latin words or digits; CJK text is joined without a space.
  */
 export function joinDictation(base: string, add: string): string {
   const a = add.trim();

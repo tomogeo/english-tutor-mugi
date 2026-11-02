@@ -98,8 +98,8 @@ describe('useSpeechInput', () => {
     unmount();
   });
 
-  it('the lang option is read at each start: ja-JP when asked, zh-TW by default', () => {
-    const opts = { lang: 'ja-JP' as string | undefined };
+  it('the lang option is read at each start: en-US when asked, zh-TW by default', () => {
+    const opts = { lang: 'en-US' as string | undefined };
     const box: { api?: Api } = {};
     const Probe = () => { box.api = useSpeechInput({}, opts); return null; };
     const host = document.createElement('div');
@@ -107,7 +107,7 @@ describe('useSpeechInput', () => {
     const root: Root = createRoot(host);
     act(() => root.render(createElement(Probe)));
     act(() => box.api?.start());
-    expect(FakeRecognition.made[0]).toMatchObject({ lang: 'ja-JP' });
+    expect(FakeRecognition.made[0]).toMatchObject({ lang: 'en-US' });
     act(() => box.api?.stop());
     act(() => FakeRecognition.made[0].onend?.());
     opts.lang = undefined;

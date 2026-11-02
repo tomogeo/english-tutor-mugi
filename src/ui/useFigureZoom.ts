@@ -1,4 +1,4 @@
-// 日語家教's free zoom / pan gestures (game/tutorZoom holds the math): pointer events on a box while the zoom is on (one finger
+// 英語家教's free zoom / pan gestures (game/tutorZoom holds the math): pointer events on a box while the zoom is on (one finger
 // drags, two pinch around the midpoint, a double tap resets, the mouse wheel zooms around the cursor). The figure (角色) and the
 // background (背景) use the same hook with their own geometry, clamp and commit. Native listeners, so the wheel can be stopped
 // and the touch gestures are not left to the page's scroll.

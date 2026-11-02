@@ -107,7 +107,7 @@ describe('TTS counting', () => {
     expect(googleTier('cmn-TW-Wavenet-A')).toBe('wavenet');
     expect(googleTier('cmn-CN-Wavenet-D')).toBe('wavenet');
     expect(googleTier('cmn-TW-Standard-A')).toBe('standard');
-    expect(googleTier('ja-JP-Neural2-B')).toBe('neural2');
+    expect(googleTier('en-US-Neural2-F')).toBe('neural2');
     expect(googleTier('en-US-Chirp3-HD-Aoede')).toBe('chirp3-hd');
     expect(googleTier('en-US-Studio-O')).toBe('studio');
     expect(googleTier('something-else')).toBe('other');
@@ -132,7 +132,7 @@ describe('TTS counting', () => {
     s.recordTts(wav, { ok: true, chars: billedChars('你好世界') });
     s.recordTts(wav, { ok: false, chars: 0 });
     s.recordTts(std, { ok: true, chars: 3 });
-    s.recordTts(ttsBucket('azure', 'ja-JP-NanamiNeural'), { ok: true, chars: 2 });
+    s.recordTts(ttsBucket('azure', 'en-US-AvaNeural'), { ok: true, chars: 2 });
     const m = s.snapshot().months['2026-10'];
     expect(m.tts.google.wavenet).toEqual({ requests: 2, failures: 1, chars: 4, cacheHits: 0, fallbacks: 0 });
     expect(m.tts.google.standard.chars).toBe(3);

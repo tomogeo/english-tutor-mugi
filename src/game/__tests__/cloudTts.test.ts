@@ -45,7 +45,7 @@ function harness(opts: { ready?: boolean } = {}) {
   };
   const io = createCloudIo({
     engine: () => 'azure',
-    voice: (lang) => (lang === 'zh' ? 'zh-TW-HsiaoChenNeural' : 'ja-JP-NanamiNeural'),
+    voice: (lang) => (lang === 'zh' ? 'zh-TW-HsiaoChenNeural' : 'en-US-AvaNeural'),
     fallback,
     onLevelSource: (s) => levels.push(s),
     deps,
@@ -97,14 +97,14 @@ describe('createCloudIo', () => {
         },
       });
       io.speak(utt('你好。', { lang: 'zh' }));
-      io.speak(utt('こんにちは。', { lang: 'ja', rate: 0.9, pitch: 1.1 }));
+      io.speak(utt('こんにちは。', { lang: 'en', rate: 0.9, pitch: 1.1 }));
       await vi.advanceTimersByTimeAsync(0);
       expect(requested).toEqual(['azure']); // only the zh sentence is fetched
       expect(played).toEqual(['zh']);
       expect(fallbackSpoken).toEqual([]); // the ja sentence waits for the zh clip
       endClip!();
       await vi.advanceTimersByTimeAsync(0);
-      expect(fallbackSpoken.map((u) => [u.lang, u.rate, u.pitch])).toEqual([['ja', 0.9, 1.1]]);
+      expect(fallbackSpoken.map((u) => [u.lang, u.rate, u.pitch])).toEqual([['en', 0.9, 1.1]]);
       io.cancel();
     } finally {
       vi.useRealTimers();

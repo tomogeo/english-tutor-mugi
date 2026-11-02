@@ -36,7 +36,7 @@ afterEach(() => {
 
 async function mount() {
   store.set(TUTOR_KEY, JSON.stringify({
-    characters: [{ id: 'mugi', name: 'むぎ', persona: '元氣的倉鼠' }, { id: 'yui', name: '結衣', persona: '冷靜的老師' }],
+    characters: [{ id: 'mugi', name: 'Mugi', persona: '元氣的倉鼠' }, { id: 'yui', name: 'Lily', persona: '冷靜的老師' }],
     activeId: 'mugi',
   }));
   const TutorView = (await import('../TutorView')).default;

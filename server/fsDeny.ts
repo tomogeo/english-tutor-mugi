@@ -10,11 +10,10 @@ export const FS_DENY: string[] = [
   '.npmrc',
   '.yarnrc.yml',
   '**/.git/**',
-  // this project's own folders: usage counts, the speech cache (kept and cached audio), the local VOICEVOX engine
+  // this project's own folders: usage counts, the speech cache (kept and cached audio)
   '**/.usage/**',
   '**/.tts-cache/**',
   '**/.tts-keep/**',
-  '**/voicevox_engine/**',
   // the Claude Code settings and local logs (a log can hold a request or a path)
   '**/.claude/**',
   '**/*.log',

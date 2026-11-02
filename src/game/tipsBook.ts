@@ -1,14 +1,13 @@
-// 小提醒筆記本: every 小提醒 (teacher-mode tip) is saved here with the Japanese targets it named, so the player can practise
+// 小提醒筆記本: every 小提醒 (teacher-mode tip) is saved here with the English targets it named, so the player can practise
 // saying them until they are right. Stored in localStorage; every access is guarded, so with no storage it still works
 // (the book just lives in memory for the session).
 
-import { stripRuby } from './furigana';
 
 export type TipEntry = {
   id: string;
   /** the tip display text (Chinese explanation) */
   text: string;
-  /** the Japanese targets written inside the tip */
+  /** the English targets written inside the tip */
   targets: string[];
   /** what the player said that triggered the tip */
   said?: string;
@@ -22,7 +21,7 @@ export type TipEntry = {
   lastResult?: 'ok' | 'ng';
 };
 
-export const TIPS_KEY = 'mugi.tips.v1';
+export const TIPS_KEY = 'mugien.tips.v1';
 export const TIPS_MAX = 300;
 
 type Listener = (tips: TipEntry[]) => void;
@@ -131,22 +130,19 @@ function sameList(a: string[], b: string[]): boolean {
 }
 
 /**
- * Loose comparison key for a Japanese sentence: NFKC, katakana → hiragana, whitespace and punctuation removed.
- * The long vowel mark ー is kept (カー and カア differ); it is not removed.
+ * Loose comparison key for an English sentence: NFKC, lower case, curly apostrophes made straight, then every space and
+ * punctuation mark removed ("I'm fine." and "im fine" compare equal).
  */
-export function normalizeJa(s: string): string {
-  let out = '';
-  for (const ch of stripRuby(s).normalize('NFKC').toLowerCase()) {
-    const c = ch.codePointAt(0) ?? 0;
-    // katakana ァ (U+30A1) … ヶ (U+30F6) → the hiragana 0x60 code points lower
-    out += c >= 0x30a1 && c <= 0x30f6 ? String.fromCodePoint(c - 0x60) : ch;
-  }
-  return out
+export function normalizeEn(s: string): string {
+  return s
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\s\u3000]+/g, '')
-    .replace(/[\u3001-\u3003\u300c-\u300f\u30fb\u2026\u301c\uff08\uff09\u3008-\u3011\uff01\uff1f]/g, '')
+    .replace(/[\u3001-\u3003\u300c-\u300f\u2026\uff08\uff09\u3008-\u3011\uff01\uff1f]/g, '')
     .replace(/[!-/:-@[-`{-~]/g, '');
 }
 
-export function sameJa(a: string, b: string): boolean {
-  return normalizeJa(a) === normalizeJa(b);
+export function sameEn(a: string, b: string): boolean {
+  return normalizeEn(a) === normalizeEn(b);
 }

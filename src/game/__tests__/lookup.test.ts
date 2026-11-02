@@ -1,10 +1,10 @@
-// 速查 (lookup): the prompt, the request to the model, reply parsing, reading fill, the level badge, the history and the
+// 速查 (lookup): the prompt, the request to the model, reply parsing, the level badge, the history and the
 // one-minute rate limit. The Anthropic client and fetch are mocked: nothing calls Claude.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type Anthropic from '@anthropic-ai/sdk';
 import {
-  LOOKUP_HISTORY_MAX, LOOKUP_KEY, addLookup, askLookup, clearLookups, jaSpeakable, levelBadge, loadLookups, normalizeLevel, parseLookupText,
-  resetLookupCacheForTest, saveLookups, stripJaTags, type LookupEntry,
+  LOOKUP_HISTORY_MAX, LOOKUP_KEY, addLookup, askLookup, clearLookups, enText, levelBadge, loadLookups, normalizeLevel, parseLookupText,
+  resetLookupCacheForTest, saveLookups, stripEnTags, type LookupEntry,
 } from '../lookup';
 import {
   LOOKUP_MAX_TOKENS, LOOKUP_MODEL, LOOKUP_PER_MINUTE, lookupAnswer, parseLookupBody, takeLookupSlot,
@@ -43,17 +43,18 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('the lookup prompt', () => {
   it('is a stable constant with no persona', () => {
-    expect(LOOKUP_SYSTEM).not.toMatch(/むぎ|Mugi/);
+    expect(LOOKUP_SYSTEM).not.toMatch(/Mugi/);
     expect(LOOKUP_SYSTEM).not.toBe(systemPrompt('Mugi'));
     expect(LOOKUP_SYSTEM).toContain('"items"');
-    expect(LOOKUP_SYSTEM).toContain('級外');
+    expect(LOOKUP_SYSTEM).toContain('CEFR');
+    expect(LOOKUP_SYSTEM).toContain('<en>');
   });
 });
 
 describe('the request to the model', () => {
   it('uses claude-haiku-5-5, 700 tokens, no thinking, the stable prompt and the question as the only message', async () => {
     const { client, create } = clientReturning('{"items":[],"grammar":[],"examples":[],"message":"ok"}');
-    await lookupAnswer(client, '這句話日文怎麼說');
+    await lookupAnswer(client, '這句話英文怎麼說');
     expect(LOOKUP_MODEL).toBe('claude-haiku-5-5');
     expect(LOOKUP_MAX_TOKENS).toBe(700);
     const [body, opts] = create.mock.calls[0] as unknown as [Record<string, unknown>, Record<string, unknown>];
@@ -61,21 +62,21 @@ describe('the request to the model', () => {
     expect(body.max_tokens).toBe(700);
     expect(body.thinking).toEqual({ type: 'disabled' });
     expect(body.system).toBe(LOOKUP_SYSTEM);
-    expect(body.messages).toEqual([{ role: 'user', content: '這句話日文怎麼說' }]);
+    expect(body.messages).toEqual([{ role: 'user', content: '這句話英文怎麼說' }]);
     expect(opts).toEqual({ timeout: 20_000 });
   });
 
-  it('parses the reply and fills the readings of every ja field', async () => {
+  it('parses the reply: every en field keeps its <en> tags, the levels are CEFR', async () => {
     const reply = JSON.stringify({
-      items: [{ ja: '<ja>学校に行きます</ja>', zh: '去學校', level: 'N5' }],
-      grammar: [{ point: '<ja>〜てしまう</ja>', level: 'N3', explain: '表示遺憾' }],
-      examples: [{ ja: '<ja>学校に行きました</ja>', zh: '我去了學校' }],
+      items: [{ en: '<en>go to school</en>', zh: '去學校', level: 'A1' }],
+      grammar: [{ point: '<en>used to + V</en>', level: 'B1', explain: '過去常常' }],
+      examples: [{ en: 'I went to school.', zh: '我去了學校' }],
     });
     const { client } = clientReturning(reply);
     const r = await lookupAnswer(client, '去學校');
-    expect(r.answer?.items[0].ja).toBe('<ja>学校[がっこう]に行[い]きます</ja>');
-    expect(r.answer?.examples[0].ja).toContain('学校[がっこう]');
-    expect(r.answer?.grammar[0].level).toBe('N3');
+    expect(r.answer?.items[0].en).toBe('<en>go to school</en>');
+    expect(r.answer?.examples[0].en).toBe('<en>I went to school.</en>');
+    expect(r.answer?.grammar[0].level).toBe('B1');
     expect(r.raw).toBe(reply);
   });
 
@@ -88,9 +89,9 @@ describe('the request to the model', () => {
 });
 
 describe('reply parsing', () => {
-  it('reads plain JSON and wraps a bare Japanese ja in <ja>', () => {
-    const a = parseLookupText('{"items":[{"ja":"ありがとう","zh":"謝謝","level":"N5"}],"grammar":[],"examples":[]}');
-    expect(a?.items[0]).toEqual({ ja: '<ja>ありがとう</ja>', zh: '謝謝', level: 'N5' });
+  it('reads plain JSON and wraps a bare English en in <en>', () => {
+    const a = parseLookupText('{"items":[{"en":"thank you","zh":"謝謝","level":"A1"}],"grammar":[],"examples":[]}');
+    expect(a?.items[0]).toEqual({ en: '<en>thank you</en>', zh: '謝謝', level: 'A1' });
   });
 
   it('strips code fences and text around the JSON', () => {
@@ -105,30 +106,31 @@ describe('reply parsing', () => {
     expect(parseLookupText('   ')).toBeNull();
   });
 
-  it('keeps Chinese fields free of <ja> tags', () => {
-    const a = parseLookupText('{"items":[{"ja":"<ja>行く</ja>","zh":"<ja>去</ja>去","level":"N5"}]}');
+  it('keeps Chinese fields free of <en> tags', () => {
+    const a = parseLookupText('{"items":[{"en":"<en>go</en>","zh":"<en>去</en>去","level":"A1"}]}');
     expect(a?.items[0].zh).toBe('去去');
-    expect(stripJaTags('<ja>x</ja>y')).toBe('xy');
+    expect(stripEnTags('<en>x</en>y')).toBe('xy');
   });
 
-  it('speech drops tags and readings', () => {
-    expect(jaSpeakable('<ja>学校[がっこう]に行[い]きます</ja>')).toBe('学校に行きます');
+  it('speech and display drop the tags', () => {
+    expect(enText('<en>I go to school.</en>')).toBe('I go to school.');
   });
 });
 
-describe('JLPT level', () => {
-  it('normalises to N1…N5 or 級外', () => {
-    expect(normalizeLevel('N4')).toBe('N4');
-    expect(normalizeLevel('n2')).toBe('N2');
-    expect(normalizeLevel(' N1 ')).toBe('N1');
-    expect(normalizeLevel('級外')).toBe('級外');
-    expect(normalizeLevel('N6')).toBe('級外');
-    expect(normalizeLevel(undefined)).toBe('級外');
+describe('CEFR level', () => {
+  it('normalises to A1…C2 or 其他', () => {
+    expect(normalizeLevel('B2')).toBe('B2');
+    expect(normalizeLevel('a1')).toBe('A1');
+    expect(normalizeLevel(' C1 ')).toBe('C1');
+    expect(normalizeLevel('其他')).toBe('其他');
+    expect(normalizeLevel('C3')).toBe('其他');
+    expect(normalizeLevel('N4')).toBe('其他');
+    expect(normalizeLevel(undefined)).toBe('其他');
   });
 
-  it('shows as 「N4」 or 「級外」', () => {
-    expect(levelBadge('N4')).toBe('「N4」');
-    expect(levelBadge('級外')).toBe('「級外」');
+  it('shows as 「B1」 or 「其他」', () => {
+    expect(levelBadge('B1')).toBe('「B1」');
+    expect(levelBadge('其他')).toBe('「其他」');
   });
 });
 

@@ -7,7 +7,7 @@ import { claudeBrain } from './claudeBrain';
 /** `tone`: how she says it, read from her meta tag. */
 export type BrainReply = { text: string; tone?: Tone };
 
-/** What a brain can do: streaming (deltas while it writes), teaching (日語老師 mode), and whether it needs the dev server. */
+/** What a brain can do: streaming (deltas while it writes), teaching (英語老師 mode), and whether it needs the dev server. */
 export type BrainCapabilities = { streaming: boolean; teacher: boolean; needsServer: boolean };
 
 /** One turn's request. `situation` is what the Claude request carries with the turn (the time of day). */
@@ -23,12 +23,12 @@ export type BrainRequest = {
 
 /** A reply with the extras only the Claude brain fills (spoken, segments, tip …). */
 export type BrainReplyFull = BrainReply & {
-  /** what is voiced (teacher mode: the Japanese only); undefined = the whole text */
+  /** what is voiced (teacher mode: the English only); undefined = the whole text */
   spoken?: string;
-  segments?: { text: string; lang: 'zh' | 'ja' }[];
+  segments?: { text: string; lang: 'zh' | 'en' }[];
   /** 小提醒 (teacher mode): its own line, never voiced */
   tip?: string;
-  tipJa?: string[];
+  tipEn?: string[];
   tipRaw?: string;
   tipRewrite?: boolean;
   /** her reply as it is stored and sent back to Claude (the reply JSON, see game/replyJson.ts) */

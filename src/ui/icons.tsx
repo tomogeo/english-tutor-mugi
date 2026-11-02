@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// Button icons of 日語家教 / 助手: inline SVG drawn with currentColor (light on the dark buttons, --on-accent on the accent ones,
+// Button icons of 英語家教 / 助手: inline SVG drawn with currentColor (light on the dark buttons, --on-accent on the accent ones,
 // the button's own text colour elsewhere). One style for all: 24-unit grid, stroke 2, round caps and joins.
 // Each icon is decorative (aria-hidden); the button keeps its aria-label.
 

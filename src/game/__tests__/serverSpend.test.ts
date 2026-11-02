@@ -11,7 +11,6 @@ import {
 } from '../../../server/claudeChat.ts';
 import { anthropicProvider, CHAT_STREAM_TIMEOUT_MS, mergeUsage } from '../../../server/llm/anthropicProvider.ts';
 import { claudeCostEstimateUsd, priciestBand, UsageStore, dailyLimitHit } from '../../../server/usage.ts';
-import { voicevoxQueued } from '../../../server/tts.ts';
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'mugi-tutor-spend-')); });
@@ -21,7 +20,7 @@ const now = new Date(2026, 9, 28, 12, 0, 0);
 const storeAt = () => new UsageStore({ file: join(dir, 'usage.json'), now: () => now, debounceMs: 60_000 });
 
 const body = parseChatBody(JSON.stringify({
-  messages: [{ role: 'user', content: '你好，我想練習日文' }, { role: 'assistant', content: 'はい' }, { role: 'user', content: '今天天氣如何？' }],
+  messages: [{ role: 'user', content: '你好，我想練習英文' }, { role: 'assistant', content: 'Sure!' }, { role: 'user', content: '今天天氣如何？' }],
   role: 'Mugi', mode: 'teacher', context: {},
 }));
 
@@ -247,13 +246,9 @@ describe('lookup concurrency: its own limit, separate from the chat slots', () =
   });
 });
 
-describe('the one-shot judge has a time limit; the VOICEVOX queue carries any result type', () => {
+describe('the one-shot judge has a time limit', () => {
   it('the judge limit is 30 seconds', () => {
     expect(JUDGE_TIMEOUT_MS).toBe(30_000);
   });
 
-  it('voicevoxQueued returns the job result of any type (the viseme query returns a list)', async () => {
-    await expect(voicevoxQueued(async () => [1, 2, 3])).resolves.toEqual([1, 2, 3]);
-    await expect(voicevoxQueued(async () => 'ok')).resolves.toBe('ok');
-  });
 });

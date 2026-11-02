@@ -8,5 +8,4 @@ dist
 .tts-keep/
 *.log
 coverage
-voicevox_engine/
 .claude/

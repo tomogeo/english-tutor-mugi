@@ -1,4 +1,4 @@
-// 日語家教's background layer (背景): the picture, covering the stage, with its dimming, and the pinch / drag / double tap of the
+// 英語家教's background layer (背景): the picture, covering the stage, with its dimming, and the pinch / drag / double tap of the
 // 背景 view. The scene box (game/tutorScene) is laid out in px, not transformed, so a figure inside it (the classroom's hamster on
 // the lectern) scales with it and its own 角色 zoom still measures true positions. Children are drawn inside the scene.
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';

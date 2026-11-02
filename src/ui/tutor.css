@@ -1,4 +1,4 @@
-/* 日語家教 (ui/TutorView): a 2D portrait on top, the chat below. Reuses the chat / sheet classes of assistant.css; the
+/* 英語家教 (ui/TutorView): a 2D portrait on top, the chat below. Reuses the chat / sheet classes of assistant.css; the
    layout is its own; the chat bar is the shared dock (ChatBar.css). Safe areas and the on-screen keyboard (useIOSKeyboard) are respected. */
 /* the page is dark and calm (沉穩的黑, this page only). The variables the shared styles read are
    set here, and the white surfaces of the shared chat bar, history and sheets are turned dark below (ChatBar.css, assistant.css).

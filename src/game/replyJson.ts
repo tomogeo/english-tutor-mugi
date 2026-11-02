@@ -8,8 +8,8 @@ import { CHAT_TONES, type ChatReplyJson, type ChatSegment } from './claudeProtoc
 /** a tone of her reply (the vocabulary of CHAT_TONES) */
 type ChatTone = (typeof CHAT_TONES)[number];
 
-/** A segment as it reads: lang is undefined until the key has come (or when it is not 'ja' / 'zh'). */
-export type ReplySegment = { lang?: 'ja' | 'zh'; text: string; gloss: string };
+/** A segment as it reads: lang is undefined until the key has come (or when it is not 'en' / 'zh'). */
+export type ReplySegment = { lang?: 'en' | 'zh'; text: string; gloss: string };
 /** The fields of a reply as they read. tip is '' when there is none; tone is undefined until it has come. */
 export type ReplyFields = { segments: ReplySegment[]; tip: string; tone?: ChatTone };
 
@@ -93,7 +93,7 @@ export function readReplyValue(value: unknown): ReplyFields {
   const rawSegments: unknown[] = Array.isArray(o.segments) ? o.segments : [];
   const segments = rawSegments.map((s): ReplySegment => {
     const x = s && typeof s === 'object' ? (s as Record<string, unknown>) : {};
-    const lang = x.lang === 'ja' || x.lang === 'zh' ? x.lang : undefined;
+    const lang = x.lang === 'en' || x.lang === 'zh' ? x.lang : undefined;
     return { lang, text: typeof x.text === 'string' ? x.text : '', gloss: typeof x.gloss === 'string' ? x.gloss : '' };
   });
   const tone = typeof o.tone === 'string' && (CHAT_TONES as readonly string[]).includes(o.tone) ? (o.tone as ChatTone) : undefined;
@@ -110,11 +110,11 @@ export function toSegments(f: ReplyFields): ChatSegment[] {
 }
 
 /**
- * The reply as it is shown: each segment's text, and a Japanese segment's gloss in full-width brackets right after it
- * (only when the gloss has come). Segments are joined with nothing between them.
+ * The reply as it is shown: each segment's text, and an English segment's gloss in full-width brackets right after it
+ * (only when the gloss has come). Segments are joined with one space (English sentences need it).
  */
 export function displayOf(segments: ReplySegment[]): string {
-  return segments.map((s) => (s.lang !== 'zh' && s.text && s.gloss ? `${s.text}（${s.gloss}）` : s.text)).join('');
+  return segments.map((s) => (s.lang !== 'zh' && s.text && s.gloss ? `${s.text}（${s.gloss}）` : s.text)).filter(Boolean).join(' ');
 }
 
 /** The canonical JSON of a reply: fixed key order (segments, tip, tone; lang, text, gloss), no spaces. Stored and sent back as is. */

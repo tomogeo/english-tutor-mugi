@@ -19,7 +19,7 @@ export const TTS_CACHE_MEM_MAX_BYTES = 32 * 1024 * 1024;
 /** a burst of writes is swept once, this long after the last write */
 export const TTS_CACHE_SWEEP_DEBOUNCE_MS = 2000;
 const FILE_RE = /^[0-9a-f]{64}\.(mp3|wav)$/;
-/** the file extension of a cached reply: MP3 from the cloud engines, WAV from VOICEVOX */
+/** the file extension of a cached reply: MP3 from the cloud engines (WAV is still accepted) */
 export type TtsAudioExt = 'mp3' | 'wav';
 
 /** the file name of a cache key: sha256 (hex) + the extension. The key holds the text, so the name hides it. */
@@ -27,7 +27,7 @@ export function ttsCacheFileName(key: string, ext: TtsAudioExt = 'mp3'): string 
   return `${createHash('sha256').update(key, 'utf8').digest('hex')}.${ext}`;
 }
 
-/** a plausible WAV payload: a RIFF container of type WAVE (VOICEVOX returns WAV) */
+/** a plausible WAV payload: a RIFF container of type WAVE  */
 export function looksLikeWav(buf: Buffer): boolean {
   return buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WAVE';
 }

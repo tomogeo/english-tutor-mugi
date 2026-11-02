@@ -15,7 +15,7 @@ import {
 import { TUTOR_CHARACTER } from '../tutorCharacters';
 
 const base = { messages: [{ role: 'user', content: '嗨' }], role: 'Mugi', mode: 'teacher', context: {} };
-const FIRST_LINE = (name: string) => `你是「${name}」，一位住在使用者身邊、專門教他日語的家教。你正在和使用者一對一練習日語。`;
+const FIRST_LINE = (name: string) => `你是「${name}」，一位住在使用者身邊、專門教他英語的家教。你正在和使用者一對一練習英語會話。`;
 
 /** the HTTP status and message of a refused request (parseName / parseChatBody throw them) */
 function refusal(fn: () => unknown): { status: number; message: string } | null {
@@ -26,13 +26,13 @@ function refusal(fn: () => unknown): { status: number; message: string } | null 
 // ---------------------------------------------------------------- the prompt
 
 describe('the first prompt line carries her name', () => {
-  it('names her with the given name, in the first line, without the English name', () => {
+  it('names her with the given name, in the first line', () => {
     expect(systemPrompt('Mugi', undefined, 'ミオ').split('\n')[0]).toBe(FIRST_LINE('ミオ'));
-    expect(systemPrompt('Mugi').split('\n')[0]).toBe(FIRST_LINE('むぎ'));
-    expect(systemPrompt('Mugi')).not.toContain('Mugi');
+    expect(systemPrompt('Mugi').split('\n')[0]).toBe(FIRST_LINE('Mugi'));
+    expect(systemPrompt('Mugi', undefined, 'ミオ')).not.toContain('Mugi');
   });
   it('the default name (or none) with no persona is one stable string', () => {
-    expect(systemPrompt('Mugi', undefined, 'むぎ')).toBe(systemPrompt('Mugi'));
+    expect(systemPrompt('Mugi', undefined, 'Mugi')).toBe(systemPrompt('Mugi'));
     expect(systemPrompt('Mugi')).toBe(systemPrompt('Mugi'));
   });
   it('the hamster lives in the default personality only: a persona or a name keeps the rules without it', () => {
@@ -41,7 +41,7 @@ describe('the first prompt line carries her name', () => {
     expect(systemPrompt('Mugi', undefined, 'ミオ')).toContain(defaultPersona('Mugi'));
   });
   it('the rules after the personality line are the same whatever the name is', () => {
-    const tail = (s: string) => s.slice(s.indexOf('\n你同時是使用者的日語會話夥伴'));
+    const tail = (s: string) => s.slice(s.indexOf('\n你同時是使用者的英語會話夥伴'));
     expect(tail(systemPrompt('Mugi', undefined, 'ミオ'))).toBe(tail(systemPrompt('Mugi')));
   });
 });
@@ -92,11 +92,11 @@ describe('the name sent with each chat request (phone)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const sse = (text: string) => `data: ${JSON.stringify({ type: 'delta', text })}\n\n` + `data: ${JSON.stringify({ type: 'done', text })}\n\n`;
-  const reply = '{"segments":[{"lang":"ja","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}';
+  const reply = '{"segments":[{"lang":"en","text":"はい","gloss":"好"}],"tip":"","tone":"happy"}';
   const teacher = { history: [{ from: 'me' as const, text: '嗨', t: 1 }], role: 'Mugi' as const, mode: 'teacher' as const, context: {} };
 
   it('sends the saved name with the chat request', async () => {
-    store.set(TUTOR_KEY, JSON.stringify({ name: 'ミオ', sttLang: 'ja-JP' }));
+    store.set(TUTOR_KEY, JSON.stringify({ name: 'ミオ', sttLang: 'en-US' }));
     const fetchMock = vi.fn(async () => new Response(sse(reply), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     await askClaude(teacher);
@@ -114,7 +114,7 @@ describe('the name sent with each chat request (phone)', () => {
 
 describe('the persona key covers the name', () => {
   it('a new name starts the request window at the new line, like a new personality', () => {
-    const k1 = personaKey(undefined, 'むぎ'), k2 = personaKey(undefined, 'ミオ');
+    const k1 = personaKey(undefined, 'Mugi'), k2 = personaKey(undefined, 'ミオ');
     const lines: ChatLine[] = [
       { from: 'me', text: '嗨', t: 1, pk: k1 },
       { from: 'her', text: 'はい', t: 2, pk: k1 },
@@ -136,7 +136,7 @@ describe('the subtitle', () => {
     expect(cleanTutorSubtitle('一二三四五六七八九十一二三四五六七八')).toHaveLength(TUTOR_SUBTITLE_MAX);
   });
   it('an older save has no subtitle: the default one', () => {
-    expect(migrateTutor({ name: 'むぎ' }).characters[0].subtitle).toBe('倉鼠・日語家教');
+    expect(migrateTutor({ name: 'Mugi' }).characters[0].subtitle).toBe('倉鼠・英語家教');
     expect(migrateTutor({ subtitle: 'ミオの部屋' }).characters[0].subtitle).toBe('ミオの部屋');
   });
 });
@@ -153,7 +153,7 @@ describe('the figure view', () => {
   });
   it('an older save has none: null, and it comes back through loadTutor', () => {
     expect(migrateTutor({}).characters[0].figureView).toBeNull();
-    const store = new Map<string, string>([[TUTOR_KEY, JSON.stringify({ name: 'むぎ', figureView: { scale: 2, x: 10, y: -4 } })]]);
+    const store = new Map<string, string>([[TUTOR_KEY, JSON.stringify({ name: 'Mugi', figureView: { scale: 2, x: 10, y: -4 } })]]);
     vi.stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} });
     expect(loadTutor().characters[0].figureView).toEqual({ scale: 2, x: 10, y: -4 });
     vi.unstubAllGlobals();

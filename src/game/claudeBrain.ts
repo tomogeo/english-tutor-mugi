@@ -1,6 +1,6 @@
-// 日語家教 Claude brain (client side). The phone never holds the API key: askClaude posts the chat to the dev server's
+// 英語家教 Claude brain (client side). The phone never holds the API key: askClaude posts the chat to the dev server's
 // /api/chat (server/claudeChat.ts) and reads the Server-Sent Events stream. Her reply is a JSON object (CHAT_REPLY_SCHEMA):
-// the stream is read while it arrives (ReplyJsonParser), so the text shows as it is written, and each Japanese segment goes
+// the stream is read while it arrives (ReplyJsonParser), so the text shows as it is written, and each English segment goes
 // to the reply bus (game/replyBus.ts) once it is complete. The done text is the reply as the server fixed it.
 import { apiFetch } from './apiFetch';
 import type { ChatBrain } from './chatBrain';
@@ -20,20 +20,20 @@ import { chatGptReady } from './openaiStatus';
 
 /** `personas`: the default personality text per role (from the server, shown in the 人設 settings) */
 export type ClaudeStatus = { ok: boolean; model: string; personas?: Record<string, string> };
-export type ClaudeSegment = { text: string; lang: 'zh' | 'ja' };
+export type ClaudeSegment = { text: string; lang: 'zh' | 'en' };
 export type ClaudeContext = ChatContext;
 export type ClaudeReply = {
-  /** the visible reply (each segment, a Japanese one with its Chinese gloss in brackets; the tip is not in it) */
+  /** the visible reply (each segment, an English one with its Chinese gloss in brackets; the tip is not in it) */
   text: string;
-  /** what is voiced: the whole reply in chat mode; in teacher mode only the Japanese (the done event on the bus carries this) */
+  /** what is voiced: the whole reply in chat mode; in teacher mode only the English (the done event on the bus carries this) */
   spoken: string;
-  /** her 小提醒 (teacher mode): Chinese explanation shown in its own bubble, never voiced; undefined when there is none */
+  /** her 小提醒 (teacher mode): the explanation shown in its own bubble, never voiced; undefined when there is none */
   tip?: string;
-  /** the Japanese targets written inside the tip (for practice); undefined when there are none */
-  tipJa?: string[];
-  /** the tip as the server wrote it, with its <ja> tags (for the background rewrite); set only with tipRewrite */
+  /** the English targets written inside the tip (for practice); undefined when there are none */
+  tipEn?: string[];
+  /** the tip as the server wrote it, with its <en> tags (for the background rewrite); set only with tipRewrite */
   tipRaw?: string;
-  /** the tip has Japanese prose outside <ja>: the server asks for a background rewrite (reviseTip), once */
+  /** the tip should be Chinese but came back in English: the server asks for a background rewrite (reviseTip), once */
   tipRewrite?: boolean;
   tone?: Tone;
   segments: ClaudeSegment[];
@@ -109,7 +109,7 @@ export function parseSSEData(data: string): SSEEvent | null {
 
 /**
  * Streaming reader for her reply (the JSON of CHAT_REPLY_SCHEMA). push() takes the raw text deltas and reads what the JSON
- * says so far (replyJson.parsePartialJson): `visible` grows as the text arrives, and push()/finish() return the Japanese
+ * says so far (replyJson.parsePartialJson): `visible` grows as the text arrives, and push()/finish() return the English
  * segments that are complete, for the voice. A segment is complete once the next one has started, or once the segments
  * array has closed. finish() ends the stream: whatever has read is then complete, so a cut reply is voiced as far as it goes.
  */
@@ -157,15 +157,15 @@ export class ReplyJsonParser {
   }
 }
 
-/** A tip with its <ja> tags: the plain text (tags removed, label stripped) and the Japanese targets inside the tags (trimmed, non-empty). */
+/** A tip with its <en> tags: the plain text (tags removed, label stripped) and the English targets inside the tags (trimmed, non-empty). */
 export function splitTip(tip: string): { text: string; targets: string[] } {
   const t = tip.trim();
-  const targets = [...t.matchAll(/<ja>([\s\S]*?)<\/ja>/g)].map((m) => m[1].trim()).filter(Boolean);
-  return { text: stripTipLabel(t.replace(/<\/?ja>/g, '').trim()).trim(), targets };
+  const targets = [...t.matchAll(/<en>([\s\S]*?)<\/en>/g)].map((m) => m[1].trim()).filter(Boolean);
+  return { text: stripTipLabel(t.replace(/<\/?en>/g, '').trim()).trim(), targets };
 }
 
 /**
- * Her reply from its fields: what is shown, what is voiced (teacher mode: the Japanese only), the tip, and the stored form.
+ * Her reply from its fields: what is shown, what is voiced (teacher mode: the English only), the tip, and the stored form.
  * tipRewrite: the server asks for the tip to be rewritten (only when there is a tip).
  */
 function viewOf(f: ReplyFields, mode: ChatModeId, tipRewrite: boolean): ClaudeReply {
@@ -173,20 +173,20 @@ function viewOf(f: ReplyFields, mode: ChatModeId, tipRewrite: boolean): ClaudeRe
   const visible = displayOf(segs).trim();
   const { text: tip, targets } = splitTip(f.tip);
   const spoken = mode === 'teacher'
-    ? segs.filter((s) => s.lang === 'ja').map((s) => s.text.trim()).filter(Boolean).join('\n')
+    ? segs.filter((s) => s.lang === 'en').map((s) => s.text.trim()).filter(Boolean).join('\n')
     : visible;
   const rewrite = !!tip && tipRewrite;
   return {
     text: visible,
     spoken,
     tip: tip || undefined,
-    tipJa: targets.length ? targets : undefined,
+    tipEn: targets.length ? targets : undefined,
     tipRaw: rewrite ? f.tip.trim() : undefined,
     tipRewrite: rewrite ? true : undefined,
     tone: f.tone,
-    // a Japanese segment with its gloss: the Japanese, then the gloss in brackets as a Chinese part (the old shape)
-    segments: segs.flatMap((s): ClaudeSegment[] => (s.lang === 'ja' && s.gloss
-      ? [{ lang: 'ja', text: s.text }, { lang: 'zh', text: `（${s.gloss}）` }]
+    // an English segment with its gloss: the English, then the gloss in brackets as a Chinese part
+    segments: segs.flatMap((s): ClaudeSegment[] => (s.lang === 'en' && s.gloss
+      ? [{ lang: 'en', text: s.text }, { lang: 'zh', text: `（${s.gloss}）` }]
       : [{ lang: s.lang, text: s.text }])),
     sent: canonicalReplyJson({ segments: segs, tip: '', tone: f.tone }),
   };
@@ -197,9 +197,9 @@ export function userChatLine(text: string, ctx: ClaudeContext, mode: ChatModeId,
   return { from: 'me', text, t, sent: userTurn(text, ctx, mode) };
 }
 
-/** The stored and sent form of a 開話題 line: its Japanese as one segment with the Chinese as the gloss, and no tip. */
-export function topicSent(ja: string, zh: string): string {
-  return canonicalReplyJson({ segments: [{ lang: 'ja', text: ja, gloss: zh }], tip: '', tone: 'happy' });
+/** The stored and sent form of a 開話題 line: its English as one segment with the Chinese as the gloss, and no tip. */
+export function topicSent(en: string, zh: string): string {
+  return canonicalReplyJson({ segments: [{ lang: 'en', text: en, gloss: zh }], tip: '', tone: 'happy' });
 }
 
 /**
@@ -256,11 +256,11 @@ export function markWindowReset(lines: ChatLine[]): ChatLine[] {
   return lines.map((l, i) => (i === at ? { ...l, win: true } : l));
 }
 
-/** A 開話題 line (her pocket topic, `topic: true`). Old saves have no `topic` flag: her line with a `<ja>` sent text and no tip counts too. */
+/** A 開話題 line (her pocket topic, `topic: true`). Old saves have no `topic` flag: her line with an `<en>` sent text and no tip counts too. */
 export function isTopicLine(l: ChatLine): boolean {
   if (l.tip) return false;
   if (l.topic === true) return true;
-  return l.from === 'her' && typeof l.sent === 'string' && l.sent.startsWith('<ja>');
+  return l.from === 'her' && typeof l.sent === 'string' && l.sent.startsWith('<en>');
 }
 
 /**
@@ -321,7 +321,7 @@ function joinAssistant(a: string, b: string): string {
  * Chat lines → API messages: the request window (see markWindowReset), each line as it was sent, cut to the server's length
  * limit, starting with the user. When the window opens with her line, CHAT_LEAD_TURN is put in front of it (the window is at
  * most CHAT_HISTORY_MAX lines, so this always stays within CHAT_MAX_MESSAGES). Her 小提醒 (tip lines) are display-only and are NOT sent back: when they were, the model
- * imitated its own earlier Japanese tips and wrote every later one in Japanese. Dropping them is deterministic (the same
+ * imitated its own earlier tips and drifted in the tip language. Dropping them is deterministic (the same
  * history always gives the same messages), so the cached prefix stays identical from turn to turn.
  */
 export function toApiMessages(history: ChatLine[]): { role: 'user' | 'assistant'; content: string }[] {
@@ -389,6 +389,8 @@ async function streamClaude(args: AskClaudeArgs, id: number, signal?: AbortSigna
         ...(persona ? { persona } : {}),
         // her name (設定 › 人物): the model is told it, so she answers to it
         name: me.name,
+        // the language of her 小提醒 (設定 › 小提醒語言)
+        tipLang: cfg.tipLang,
         // the AI services in the player's order (Claude, ChatGPT or both) and the ChatGPT model
         ...aiServicesOf(cfg),
       }),
@@ -402,8 +404,8 @@ async function streamClaude(args: AskClaudeArgs, id: number, signal?: AbortSigna
   const parser = new ReplyJsonParser();
   const emitSegments = (segs: ClaudeSegment[]) => {
     for (const s of segs) {
-      // teacher mode: only her Japanese is voiced; the Chinese in brackets is shown in the bubble, never spoken
-      if (args.mode === 'teacher' && s.lang !== 'ja') continue;
+      // teacher mode: only her English is voiced; the Chinese in brackets is shown in the bubble, never spoken
+      if (args.mode === 'teacher' && s.lang !== 'en') continue;
       emitReply({ type: 'delta', id, text: s.text, lang: s.lang });
     }
   };
@@ -444,7 +446,7 @@ async function streamClaude(args: AskClaudeArgs, id: number, signal?: AbortSigna
   }
 
   emitSegments(parser.finish());
-  // the done text is her reply as the server fixed it (readings filled, a Japanese tip repaired): it is what is shown and
+  // the done text is her reply as the server fixed it (the tip read and its English wrapped): it is what is shown and
   // stored. Without one (an older server) the streamed fields are used. The voice was already driven by the streamed segments.
   const doneValue = finalText?.trim() ? parsePartialJson(finalText) : undefined;
   const fields = doneValue !== undefined ? readReplyValue(doneValue) : parser.fields;
@@ -457,8 +459,8 @@ async function streamClaude(args: AskClaudeArgs, id: number, signal?: AbortSigna
 export const TIP_REVISE_TIMEOUT_MS = 10_000;
 
 /**
- * The background rewrite of one 小提醒 that came back with Japanese prose (POST /api/chat/fix-tip, once per tip). Gives the
- * new tip text (plain, label stripped) and its Japanese targets; null on any failure or timeout, and then the original tip
+ * The background rewrite of one 小提醒 that came back in English instead of Chinese (POST /api/chat/fix-tip, once per tip).
+ * Gives the new tip text (plain, label stripped) and its English targets; null on any failure or timeout, and then the original tip
  * stays. Only ever a console.warn: the player is never shown an error for it.
  */
 export async function reviseTip(
@@ -530,7 +532,7 @@ export const claudeBrain: ChatBrain = {
     }, req.signal);
     return {
       text: c.text, tone: c.tone,
-      spoken: c.spoken, segments: c.segments, tip: c.tip, tipJa: c.tipJa, tipRaw: c.tipRaw, tipRewrite: c.tipRewrite, sent: c.sent,
+      spoken: c.spoken, segments: c.segments, tip: c.tip, tipEn: c.tipEn, tipRaw: c.tipRaw, tipRewrite: c.tipRewrite, sent: c.sent,
     };
   },
 };

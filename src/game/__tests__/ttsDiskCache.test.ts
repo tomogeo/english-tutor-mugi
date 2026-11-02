@@ -217,7 +217,7 @@ describe('TtsCache: concurrent requests and damaged files', () => {
 // ---- answerTts: the billing rule with the disk cache in front of the provider
 
 const AZ: TtsBody = { engine: 'azure', voice: 'zh-TW-HsiaoChenNeural', text: '你好世界', rate: 1, pitch: 1 };
-const GO: TtsBody = { engine: 'google', voice: 'ja-JP-Neural2-B', text: 'はい', rate: 1, pitch: 1 };
+const GO: TtsBody = { engine: 'google', voice: 'en-US-Neural2-F', text: 'はい', rate: 1, pitch: 1 };
 const usageAt = (file: string) => new UsageStore({ file, now: () => new Date(2026, 9, 20, 12), debounceMs: 60_000 });
 const month = (u: UsageStore) => u.snapshot().months['2026-10'].tts;
 
@@ -258,8 +258,8 @@ describe('answerTts: billing with the disk cache', () => {
     const got = await answerTts(GO, { cache: c, usage, synth, azureConfigured: false });
     expect(got).toMatchObject({ kind: 'audio', hit: false, fellBack: true, requestedTier: 'neural2' });
     if (got.kind !== 'audio') throw new Error('expected audio');
-    expect(got.use.voice).toBe('ja-JP-Wavenet-B');
-    expect(synth).toHaveBeenCalledWith(expect.objectContaining({ voice: 'ja-JP-Wavenet-B' }));
+    expect(got.use.voice).toBe('en-US-Wavenet-F');
+    expect(synth).toHaveBeenCalledWith(expect.objectContaining({ voice: 'en-US-Wavenet-F' }));
     await c.settle();
     expect(existsSync(join(cdir, ttsCacheFileName(cacheKey(got.use))))).toBe(true);
   });
@@ -299,7 +299,7 @@ describe('route helpers', () => {
     expect(sameOriginRequest({ socket: { remoteAddress: '127.0.0.1' }, origin: 'http://localhost:3004', host: 'localhost:3004', 'sec-fetch-site': 'cross-site' })).toBe(false);
     expect(sameOriginRequest({ socket: { remoteAddress: '127.0.0.1' }, origin: 'not a url', host: 'localhost:3004' })).toBe(false);
     expect(sameOriginRequest({ socket: { remoteAddress: '127.0.0.1' }, host: 'localhost:3004' })).toBe(true);
-    // a LAN connection (its own address, Host 127.0.0.1) is refused here too: the cache clear and VOICEVOX are this PC's
+    // a LAN connection (its own address, Host 127.0.0.1) is refused here too: the cache clear is this PC's
     expect(sameOriginRequest({ socket: { remoteAddress: '192.168.1.50' }, host: 'localhost:3004' })).toBe(false);
     expect(sameOriginRequest({ host: 'localhost:3004' })).toBe(false);
   });

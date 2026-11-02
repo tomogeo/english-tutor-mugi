@@ -18,14 +18,13 @@ async function servedBy(deny: string[]) {
 }
 
 describe('fs.deny: this project\'s folders are not served', () => {
-  it('refuses the usage counts, the speech cache, the kept audio and the local engine folder', async () => {
+  it('refuses the usage counts, the speech cache and the kept audio', async () => {
     const served = await servedBy(FS_DENY);
     expect(served('/.usage/usage.json')).toBe(false);
     expect(served('/.usage/usage.json.bad-1700000000000')).toBe(false);
     expect(served('/.tts-cache/test.txt')).toBe(false);
     expect(served('/.tts-cache/deep/0a1b.mp3')).toBe(false);
     expect(served('/.tts-keep/voice.wav')).toBe(false);
-    expect(served('/voicevox_engine/run.exe')).toBe(false);
   });
 
   it('refuses the Claude Code folder and any log file, wherever it is', async () => {

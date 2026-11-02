@@ -56,11 +56,11 @@ describe('backgroundRefusal (what the picker refuses)', () => {
   });
 });
 
-describe('the background picture in IndexedDB (mugi-art, version 2)', () => {
+describe('the background picture in IndexedDB (mugien-art, version 2)', () => {
   it('opens version 2 and adds the background store, keeping the art store as it was', async () => {
     const fake = fakeIndexedDb(['art']);
     await loadBackgroundPicture('b1');
-    expect(fake.opened).toEqual([['mugi-art', 2]]);
+    expect(fake.opened).toEqual([['mugien-art', 2]]);
     expect(fake.created).toEqual(['background']);
     expect(fake.stores.has('art')).toBe(true);
   });

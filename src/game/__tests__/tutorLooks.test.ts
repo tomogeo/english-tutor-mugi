@@ -7,7 +7,7 @@ import { overlayFile, parseTutorArt, TutorFaceClock, type TutorArt } from '../tu
 const idle = { speaking: false, cue: null, level: 0 };
 const speaking = { ...idle, speaking: true };
 
-/** the art json of むぎ as the art script wrote it (extra fields: fit, seamReport, blend, feather, visemes, ellipse, poses) */
+/** the art json of Mugi as the art script wrote it (extra fields: fit, seamReport, blend, feather, visemes, ellipse, poses) */
 const mugiJson = {
   size: 657, box: [276, 308, 393, 403], feather: 10, visemes: ['a', 'e', 'i', 'o', 'u', 'm'], takes: [1],
   faceless: true, talkFaces: null,
@@ -18,7 +18,7 @@ const mugiJson = {
   fit: { scale: 0.998, dx: -142.75, dy: 2.0, source: 'open frame onto closed frame, mean colour difference' },
 };
 
-describe('the parser takes むぎ\'s art (one take, extra fields)', () => {
+describe('the parser takes Mugi\'s art (one take, extra fields)', () => {
   it('accepts takes [1] and ignores fit / feather / visemes / poses', () => {
     const art = parseTutorArt(mugiJson) as TutorArt;
     expect(art).not.toBeNull();
@@ -67,7 +67,7 @@ describe('the mouth of a one-take art never asks for take 2', () => {
   });
 });
 
-describe('the real art of むぎ (public/characters/mugi)', () => {
+describe('the real art of Mugi (public/characters/mugi)', () => {
   const root = fileURLToPath(new URL('../../../public/characters/mugi/', import.meta.url));
   const json = `${root}tutor.json`;
   const visemes = ['a', 'e', 'i', 'o', 'u', 'm'] as const;
@@ -76,7 +76,7 @@ describe('the real art of むぎ (public/characters/mugi)', () => {
     expect(TUTOR_CHARACTER.artDir).toBe('characters/mugi');
     expect(TUTOR_CHARACTER.id).toBe('mugi');
   });
-  it.skipIf(!existsSync(json))('むぎ: a faceless cut-out (no backdrop), one take, all six overlays and the body on disk', () => {
+  it.skipIf(!existsSync(json))('Mugi: a faceless cut-out (no backdrop), one take, all six overlays and the body on disk', () => {
     const art = parseTutorArt(JSON.parse(readFileSync(json, 'utf8'))) as TutorArt;
     expect(art).not.toBeNull();
     expect(art.faceless).toBe(true);

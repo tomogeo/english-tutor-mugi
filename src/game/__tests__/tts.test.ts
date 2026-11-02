@@ -38,7 +38,7 @@ describe('takeSentences', () => {
 
 describe('detectLang', () => {
   it('kana means Japanese, otherwise Chinese', () => {
-    expect(detectLang('ありがとう')).toBe('ja');
+    expect(detectLang('ありがとう')).toBe('en');
     expect(detectLang('謝謝你')).toBe('zh');
   });
 });
@@ -55,12 +55,12 @@ describe('SentenceBuffer', () => {
   it('a language switch flushes the pending text first, so an utterance is one language', () => {
     const b = new SentenceBuffer();
     expect(b.push('好的', 'zh')).toEqual([]);
-    expect(b.push('はい。', 'ja')).toEqual([{ text: '好的', lang: 'zh' }, { text: 'はい。', lang: 'ja' }]);
+    expect(b.push('はい。', 'en')).toEqual([{ text: '好的', lang: 'zh' }, { text: 'はい。', lang: 'en' }]);
   });
 
   it('without an explicit lang each sentence is detected on its own', () => {
     const b = new SentenceBuffer();
-    expect(b.push('好。ありがとう。')).toEqual([{ text: '好。', lang: 'zh' }, { text: 'ありがとう。', lang: 'ja' }]);
+    expect(b.push('好。ありがとう。')).toEqual([{ text: '好。', lang: 'zh' }, { text: 'ありがとう。', lang: 'en' }]);
   });
 });
 
@@ -69,9 +69,9 @@ describe('createSpeechQueue', () => {
     const { spoken, q } = makeQueue();
     q.enqueue('第一句。', 'zh');
     q.enqueue('第二句。', 'zh');
-    q.enqueue('こんにちは。', 'ja');
+    q.enqueue('こんにちは。', 'en');
     expect(spoken.map((u) => u.text)).toEqual(['第一句。', '第二句。', 'こんにちは。']);
-    expect(spoken.map((u) => u.lang)).toEqual(['zh', 'zh', 'ja']);
+    expect(spoken.map((u) => u.lang)).toEqual(['zh', 'zh', 'en']);
     expect(spoken[0]).toMatchObject({ rate: 1.05, pitch: 1, volume: 0.8 });
   });
 
@@ -150,15 +150,15 @@ describe('createReplyVoice (reply bus → queue, lang routing)', () => {
   it('routes each delta by its lang', () => {
     voice({ type: 'start', id: 2 });
     voice({ type: 'delta', id: 2, text: '看這個。', lang: 'zh' });
-    voice({ type: 'delta', id: 2, text: 'これは本です。', lang: 'ja' });
+    voice({ type: 'delta', id: 2, text: 'これは本です。', lang: 'en' });
     voice({ type: 'done', id: 2, text: '' });
-    expect(queued).toEqual([{ text: '看這個。', lang: 'zh' }, { text: 'これは本です。', lang: 'ja' }]);
+    expect(queued).toEqual([{ text: '看這個。', lang: 'zh' }, { text: 'これは本です。', lang: 'en' }]);
   });
 
   it('a reply that never streamed is spoken whole on done, sentence by sentence with detected langs', () => {
     voice({ type: 'start', id: 3 });
     voice({ type: 'done', id: 3, text: '好的。ありがとう' });
-    expect(queued).toEqual([{ text: '好的。', lang: 'zh' }, { text: 'ありがとう', lang: 'ja' }]);
+    expect(queued).toEqual([{ text: '好的。', lang: 'zh' }, { text: 'ありがとう', lang: 'en' }]);
   });
 
   it('start cancels the speech of the previous reply', () => {
@@ -189,7 +189,7 @@ describe('pickVoice', () => {
     { name: 'Ting-Ting', lang: 'zh-CN' },
     { name: 'Meijia', lang: 'zh-TW' },
     { name: 'Yu-shu', lang: 'zh-TW' },
-    { name: 'Kyoko', lang: 'ja-JP' },
+    { name: 'Kyoko', lang: 'en-US' },
     { name: 'Otoya', lang: 'ja_JP' },
     { name: 'English', lang: 'en-US' },
   ];
@@ -200,8 +200,8 @@ describe('pickVoice', () => {
     expect(pickVoice(voices.filter((v) => !v.lang.startsWith('zh-TW') && !v.lang.startsWith('zh-HK')), 'zh')?.name).toBe('Ting-Ting');
   });
 
-  it('prefers ja-JP (Kyoko) and returns null when there is no matching language', () => {
-    expect(pickVoice(voices, 'ja')?.name).toBe('Kyoko');
+  it('prefers en-US (Kyoko) and returns null when there is no matching language', () => {
+    expect(pickVoice(voices, 'en')?.name).toBe('Kyoko');
     expect(pickVoice([{ name: 'English', lang: 'en-US' }], 'zh')).toBeNull();
   });
 });
@@ -229,7 +229,7 @@ describe('AsideFilter', () => {
 
 describe('voice quality and the chosen voice', () => {
   const setLang = (lang: Lang, patch: Partial<LangVoice>) => setTtsSettings({ [lang]: { ...getTtsSettings()[lang], ...patch } } as Partial<TtsSettings>);
-  afterEach(() => { setTtsSettings({ zh: TTS_DEFAULTS.zh, ja: TTS_DEFAULTS.ja }); });
+  afterEach(() => { setTtsSettings({ zh: TTS_DEFAULTS.zh, en: TTS_DEFAULTS.en }); });
 
   it('inside a region a high-quality voice beats the plain one, in either order', () => {
     const plain = { name: '美佳', lang: 'zh-TW' };
@@ -249,7 +249,7 @@ describe('voice quality and the chosen voice', () => {
     const voices = [{ name: '美佳', lang: 'zh-TW' }, { name: '月（高音質）', lang: 'zh-CN' }];
     setLang('zh', { voices: { browser: '月（高音質）' } });
     expect(chosenVoice(voices, 'zh')?.name).toBe('月（高音質）');
-    expect(chosenVoice(voices, 'ja')).toBeNull(); // the zh choice does not leak into ja
+    expect(chosenVoice(voices, 'en')).toBeNull(); // the zh choice does not leak into ja
     setLang('zh', { voices: { browser: '不存在的聲音' } });
     expect(chosenVoice(voices, 'zh')?.name).toBe('美佳');
     setLang('zh', { voices: {} });
@@ -259,9 +259,9 @@ describe('voice quality and the chosen voice', () => {
   it('each language has its own 語速 and 音調; both are clamped to their ranges', () => {
     setLang('zh', { pitch: 5, rate: 9 });
     expect(getTtsSettings().zh).toMatchObject({ pitch: 1.3, rate: 1.3 });
-    expect(getTtsSettings().ja).toMatchObject({ pitch: 1, rate: 1.05 });
-    setLang('ja', { pitch: 0, rate: 0 });
-    expect(getTtsSettings().ja).toMatchObject({ pitch: 0.8, rate: 0.8 });
+    expect(getTtsSettings().en).toMatchObject({ pitch: 1, rate: 1.05 });
+    setLang('en', { pitch: 0, rate: 0 });
+    expect(getTtsSettings().en).toMatchObject({ pitch: 0.8, rate: 0.8 });
     expect(getTtsSettings().zh.pitch).toBe(1.3);
     setLang('zh', { pitch: 1.044, rate: 1.066 });
     expect(getTtsSettings().zh).toMatchObject({ pitch: 1.04, rate: 1.07 }); // snapped to the 0.01 step
@@ -269,14 +269,14 @@ describe('voice quality and the chosen voice', () => {
 
   it('each language keeps its own engine; an unknown engine name falls back to the browser', () => {
     setLang('zh', { engine: 'google' });
-    expect(getTtsSettings()).toMatchObject({ zh: { engine: 'google' }, ja: { engine: 'browser' } });
-    setLang('ja', { engine: 'nope' as never });
-    expect(getTtsSettings().ja.engine).toBe('browser');
+    expect(getTtsSettings()).toMatchObject({ zh: { engine: 'google' }, en: { engine: 'browser' } });
+    setLang('en', { engine: 'nope' as never });
+    expect(getTtsSettings().en.engine).toBe('browser');
   });
 
   it('the voice ids of each engine are kept per language; non-string ids become ""', () => {
-    setLang('ja', { voices: { azure: 'ja-JP-NanamiNeural', google: 3 as never } });
-    expect(getTtsSettings().ja.voices).toEqual({ azure: 'ja-JP-NanamiNeural' });
+    setLang('en', { voices: { azure: 'en-US-AvaNeural', google: 3 as never } });
+    expect(getTtsSettings().en.voices).toEqual({ azure: 'en-US-AvaNeural' });
     expect(getTtsSettings().zh.voices).toEqual({});
   });
 });
@@ -284,25 +284,25 @@ describe('voice quality and the chosen voice', () => {
 describe('migrateTtsSettings (per-language settings and the older one-engine save)', () => {
   it('an old save (one engine, rate and pitch, voices per language) applies the same values to both languages', () => {
     const m = migrateTtsSettings({
-      on: false, rate: 1.2, pitch: 1.3, engine: 'azure', zhVoice: 'a', jaVoice: 'b',
-      azureZh: 'zh-TW-HsiaoYuNeural', azureJa: 'ja-JP-NanamiNeural', googleZh: 'g1', googleJa: 'g2',
+      on: false, rate: 1.2, pitch: 1.3, engine: 'azure', zhVoice: 'a', enVoice: 'b',
+      azureZh: 'zh-TW-HsiaoYuNeural', azureEn: 'en-US-AvaNeural', googleZh: 'g1', googleEn: 'g2',
     });
     expect(m.on).toBe(false);
     expect(m.zh).toEqual({ engine: 'azure', rate: 1.2, pitch: 1.3, voices: { browser: 'a', azure: 'zh-TW-HsiaoYuNeural', google: 'g1' } });
-    expect(m.ja).toEqual({ engine: 'azure', rate: 1.2, pitch: 1.3, voices: { browser: 'b', azure: 'ja-JP-NanamiNeural', google: 'g2' } });
+    expect(m.en).toEqual({ engine: 'azure', rate: 1.2, pitch: 1.3, voices: { browser: 'b', azure: 'en-US-AvaNeural', google: 'g2' } });
   });
 
   it('an old save with out-of-range numbers and non-string voices is clamped and cleaned', () => {
     const m = migrateTtsSettings({ rate: 9, pitch: -3, zhVoice: 7, engine: 'nope' });
     expect(m.zh).toEqual({ engine: 'browser', rate: 1.3, pitch: 0.8, voices: {} });
-    expect(m.ja).toEqual({ engine: 'browser', rate: 1.3, pitch: 0.8, voices: {} });
+    expect(m.en).toEqual({ engine: 'browser', rate: 1.3, pitch: 0.8, voices: {} });
   });
 
   it('nothing saved gives the defaults for both languages', () => {
     expect(migrateTtsSettings(null)).toEqual({
       on: true,
       zh: { engine: 'browser', rate: 1.05, pitch: 1, voices: {} },
-      ja: { engine: 'browser', rate: 1.05, pitch: 1, voices: {} },
+      en: { engine: 'browser', rate: 1.05, pitch: 1, voices: {} },
     });
   });
 
@@ -310,7 +310,7 @@ describe('migrateTtsSettings (per-language settings and the older one-engine sav
     const v2 = {
       on: true,
       zh: { engine: 'google', rate: 1.1, pitch: 1.1, voices: { google: 'cmn-TW-Wavenet-A' } },
-      ja: { engine: 'browser', rate: 1, pitch: 1, voices: { browser: 'Kyoko' } },
+      en: { engine: 'browser', rate: 1, pitch: 1, voices: { browser: 'Kyoko' } },
     };
     expect(migrateTtsSettings(v2)).toEqual(v2);
   });
@@ -318,13 +318,13 @@ describe('migrateTtsSettings (per-language settings and the older one-engine sav
   it('a saved v1 key is read when no v2 key exists (module load)', async () => {
     vi.resetModules();
     vi.stubGlobal('localStorage', {
-      getItem: (k: string) => (k === 'mugi.tts.v1' ? JSON.stringify({ on: true, rate: 1.2, pitch: 1.3, engine: 'google', googleZh: 'x', googleJa: 'y' }) : null),
+      getItem: (k: string) => (k === 'mugien.tts.v1' ? JSON.stringify({ on: true, rate: 1.2, pitch: 1.3, engine: 'google', googleZh: 'x', googleEn: 'y' }) : null),
       setItem() {},
     });
     try {
       const fresh = await import('../tts');
       expect(fresh.getTtsSettings().zh).toEqual({ engine: 'google', rate: 1.2, pitch: 1.3, voices: { google: 'x' } });
-      expect(fresh.getTtsSettings().ja).toEqual({ engine: 'google', rate: 1.2, pitch: 1.3, voices: { google: 'y' } });
+      expect(fresh.getTtsSettings().en).toEqual({ engine: 'google', rate: 1.2, pitch: 1.3, voices: { google: 'y' } });
     } finally {
       vi.unstubAllGlobals();
       vi.resetModules();
@@ -360,7 +360,7 @@ describe('createSpeechQueue with per-language settings (a mixed reply)', () => {
       volume: () => 0.8,
     });
     q.enqueue('你好，今天很好。', 'zh');
-    q.enqueue('こんにちは。', 'ja');
-    expect(f.spoken.map((u) => [u.lang, u.rate, u.pitch])).toEqual([['zh', 1.1, 1.1], ['ja', 0.9, 1]]);
+    q.enqueue('こんにちは。', 'en');
+    expect(f.spoken.map((u) => [u.lang, u.rate, u.pitch])).toEqual([['zh', 1.1, 1.1], ['en', 0.9, 1]]);
   });
 });

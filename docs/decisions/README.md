@@ -1,12 +1,14 @@
 # 設計決策紀錄（ADR）
 
+> **英文版說明：** 這些紀錄寫於原本的日語版（[brian901106/japanese-tutor-mugi](https://github.com/brian901106/japanese-tutor-mugi)）。英文版拿掉了 VOICEVOX 與 kuromoji（漢字讀音），所以 0001 已刪除，其他紀錄裡提到日文、讀音或 VOICEVOX 的地方只是歷史背景；快取、防護、Structured Outputs 等設計在英文版仍然相同。
+
 架構決策紀錄（Architecture Decision Record，ADR）記下一個重要設計決定的背景、考慮過的選項、最後的選擇與代價，讓之後的人知道「為什麼這樣做」，以及什麼情況下該重新檢討。
 
 架構總覽圖：[overview.svg](../img/overview.svg)（一句話從送出到回來，哪些步驟是 AI、哪些是程式）。
 
 | 編號 | 標題 | 狀態 |
 | --- | --- | --- |
-| [0001](0001-voicevox-local-speech.md) | 地端語音：Claude 不必知道 VOICEVOX | 已採用 |
+| 0001 | 地端語音：Claude 不必知道 VOICEVOX | 英文版已移除 |
 | [0002](0002-prompt-cache.md) | 快取：不變的放前面，讓 Claude 記住 | 已採用 |
 | [0003](0003-model-by-task.md) | 模型：看工作選大小 | 已採用 |
 | [0004](0004-server-guards.md) | 防護：模型會出錯，程式來接 | 已採用 |

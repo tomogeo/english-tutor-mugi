@@ -29,26 +29,26 @@ afterEach(() => vi.unstubAllGlobals());
 
 /** the three built-in characters as they start */
 const CHARS: Character[] = [
-  { id: 'mugi', name: 'むぎ', subtitle: '倉鼠・日語家教', persona: '', figureView: null, voice: null },
-  { id: 'yui', name: '結衣', subtitle: '高中生・日語家教', persona: '', figureView: null, voice: { gender: 'female' } },
-  { id: 'yuma', name: '悠真', subtitle: '大學生・日語家教', persona: '', figureView: null, voice: { gender: 'male' } },
+  { id: 'mugi', name: 'Mugi', subtitle: '倉鼠・英語家教', persona: '', figureView: null, voice: null },
+  { id: 'yui', name: 'Lily', subtitle: '高中生・英語家教', persona: '', figureView: null, voice: { gender: 'female' } },
+  { id: 'yuma', name: 'Ethan', subtitle: '大學生・英語家教', persona: '', figureView: null, voice: { gender: 'male' } },
 ];
 
 /** the model, background and other fields every settings object has by default (the characters, the mic language are listed apart) */
 const MODELS = {
-  chatModel: '', helperModel: 'claude-haiku-5-5', providers: ['anthropic'], openaiModel: '',
+  tipLang: 'zh', showGloss: true, chatModel: '', helperModel: 'claude-haiku-5-5', providers: ['anthropic'], openaiModel: '',
   background: 'classroom', customBackgrounds: [], backgroundOpts: {},
 } as const;
 
 /** a whole settings object: the characters, the active one, and the other fields */
 const settingsOf = (characters: Character[], extra: Partial<TutorSettings> = {}): TutorSettings => ({
-  characters, activeId: 'mugi', sttLang: 'ja-JP', ...MODELS, ...extra,
+  characters, activeId: 'mugi', sttLang: 'en-US', ...MODELS, ...extra,
 });
 
 describe('storage keys', () => {
   it('uses its own settings and chat keys under the mugi prefix', () => {
-    expect(TUTOR_KEY).toBe('mugi.tutor.v1');
-    expect(TUTOR_CHAT_KEY).toBe('mugi.tutor.chat.v1');
+    expect(TUTOR_KEY).toBe('mugien.tutor.v1');
+    expect(TUTOR_CHAT_KEY).toBe('mugien.tutor.chat.v1');
   });
   it('the settings and the chat are stored apart', () => {
     writeTutorChat([{ from: 'her', text: 'こんにちは', t: 2 }]);
@@ -62,8 +62,8 @@ describe('storage keys', () => {
 });
 
 describe('tutor settings', () => {
-  it('defaults to むぎ, 結衣 and 悠真, the Japanese listening language, the server chat model and Haiku for the helpers', () => {
-    expect(TUTOR_DEFAULT_NAME).toBe('むぎ');
+  it('defaults to Mugi, Lily and Ethan, the English listening language, the server chat model and Haiku for the helpers', () => {
+    expect(TUTOR_DEFAULT_NAME).toBe('Mugi');
     expect(DEFAULT_TUTOR).toEqual(settingsOf(CHARS));
     expect(loadTutor()).toEqual(settingsOf(CHARS));
   });
@@ -81,9 +81,9 @@ describe('tutor settings', () => {
     expect(next.characters.slice(1)).toEqual(CHARS.slice(1));
     expect(loadTutor()).toEqual(next);
   });
-  it('the mic language falls back to Japanese for anything but 中文', () => {
+  it('the mic language falls back to English for anything but 中文', () => {
     expect(migrateTutor({ sttLang: 'zh-TW' }).sttLang).toBe('zh-TW');
-    expect(migrateTutor({ sttLang: 'en-US' }).sttLang).toBe('ja-JP');
+    expect(migrateTutor({ sttLang: 'en-US' }).sttLang).toBe('en-US');
     expect(migrateTutor(null)).toEqual(settingsOf(CHARS));
   });
   it('a broken value falls back to the defaults', () => {
@@ -108,14 +108,14 @@ describe('tutor chat history', () => {
   });
 });
 
-describe('the tutor persona on the server (むぎ)', () => {
+describe('the tutor persona on the server (Mugi)', () => {
   it('the system prompt names her, is the same on every call, and never asks for a scene', () => {
     const a = systemPrompt('Mugi');
-    expect(a).toContain('むぎ');
+    expect(a).toContain('Mugi');
     expect(a).toBe(systemPrompt('Mugi'));
     expect(a).not.toContain('action');
   });
-  it('teaches in Japanese (teacher rules) as a JSON reply with segments, tip and tone', () => {
+  it('teaches in English (teacher rules) as a JSON reply with segments, tip and tone', () => {
     const a = systemPrompt('Mugi');
     expect(a).toContain('segments');
     expect(a).toContain('tip');
@@ -129,7 +129,7 @@ describe('the tutor persona on the server (むぎ)', () => {
 
 describe('tutor settings from an older save', () => {
   it('a save that still has a scheme field loads; the field is ignored and not kept', () => {
-    ls.setItem(TUTOR_KEY, JSON.stringify({ name: 'むぎ', sttLang: 'ja-JP', scheme: 'matcha' }));
+    ls.setItem(TUTOR_KEY, JSON.stringify({ name: 'Mugi', sttLang: 'en-US', scheme: 'matcha' }));
     const s = loadTutor();
     expect(s).toEqual(DEFAULT_TUTOR);
     expect('scheme' in s).toBe(false);
@@ -139,7 +139,7 @@ describe('tutor settings from an older save', () => {
 
 describe('background settings (背景)', () => {
   it('an older save has no background: the classroom, nothing added, no settings of its own', () => {
-    const s = migrateTutor({ name: 'むぎ', sttLang: 'ja-JP' });
+    const s = migrateTutor({ name: 'Mugi', sttLang: 'en-US' });
     expect(s.background).toBe('classroom');
     expect(s.customBackgrounds).toEqual([]);
     expect(s.backgroundOpts).toEqual({});

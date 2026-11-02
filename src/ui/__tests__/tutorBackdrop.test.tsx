@@ -124,7 +124,7 @@ describe('TutorBackdrop (背景 layer)', () => {
 describe('the zoom target toggle (角色｜背景) in the tutor view', () => {
   beforeEach(() => {
     vi.resetModules();
-    sessionStorage.setItem('mugi.tutorZoom.on', '1'); // free zoom is on for the session
+    sessionStorage.setItem('mugien.tutorZoom.on', '1'); // free zoom is on for the session
   });
   afterEach(() => {
     sessionStorage.clear();
@@ -163,7 +163,7 @@ describe('the zoom target toggle (角色｜背景) in the tutor view', () => {
     a(() => root.unmount());
     host.remove();
 
-    localStorage.setItem('mugi.tutor.v1', JSON.stringify({ background: 'black' }));
+    localStorage.setItem('mugien.tutor.v1', JSON.stringify({ background: 'black' }));
     const host2 = document.createElement('div');
     document.body.appendChild(host2);
     const root2 = cr(host2);

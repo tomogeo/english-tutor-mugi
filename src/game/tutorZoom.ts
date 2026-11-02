@@ -1,4 +1,4 @@
-// 日語家教's free zoom / pan (自由縮放): the gesture math for the character figure, pure so it can be tested. The view is a
+// 英語家教's free zoom / pan (自由縮放): the gesture math for the character figure, pure so it can be tested. The view is a
 // translate + scale of the figure's box about its own centre: the body, the face and the mouth overlays move as one (the
 // figure is one wrapper in TutorPortrait), so the lip sync and the blink stay aligned. Coordinates are client pixels.
 export type Pt = { x: number; y: number };
@@ -20,7 +20,7 @@ export const TAP_SLOP_PX = 10;
 /** the share of the scaled figure that must stay on the stage, so a pan can never drag it fully out of view */
 const KEEP = 0.3;
 const WHEEL_RATE = 0.0015;
-const STORE_KEY = 'mugi.tutorZoom.on';
+const STORE_KEY = 'mugien.tutorZoom.on';
 
 /** the scale kept between min and max (1x..4x by default; the figure's own picture may go down to FIGURE_SCALE_MIN) */
 export function clampScale(s: number, max: number = ZOOM_MAX, min: number = ZOOM_MIN): number {

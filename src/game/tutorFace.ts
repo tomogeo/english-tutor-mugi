@@ -1,5 +1,5 @@
-// 日語家教 face: when she blinks and which mouth overlay is on while she speaks. Pure state machines (time and randomness are
-// passed in), so they are tested with fake clocks. むぎ is faceless: her body picture is the whole figure, and the lip-sync
+// 英語家教 face: when she blinks and which mouth overlay is on while she speaks. Pure state machines (time and randomness are
+// passed in), so they are tested with fake clocks. Mugi is faceless: her body picture is the whole figure, and the lip-sync
 // is a set of mouth overlays drawn on top of it (public/characters/mugi/mouth-<take>-<viseme>.webp), placed by tutor.json.
 
 import type { VisemeCode } from './visemes';
@@ -64,7 +64,7 @@ export type TutorFrame = { closed: boolean; mouth: MouthCue | null };
 export type TutorFaceInput = {
   /** she is voicing a reply right now */
   speaking: boolean;
-  /** the timeline's shape now (VOICEVOX clips), null when the line has none */
+  /** the timeline's shape now (a clip that carries one), null when the line has none */
   cue: VisemeCue | null;
   /** the voice loudness, 0..1 (used when there is no cue) */
   level: number;

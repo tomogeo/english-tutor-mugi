@@ -1,4 +1,4 @@
-// 速查 (quick Japanese lookup): the player asks how to say something, or about a word or grammar point. Not the character
+// 速查 (quick English lookup): the player asks how to say something, or about a word or grammar point. Not the character
 // chat: nothing here touches her chat history. Pure parsing and history helpers (no DOM at import time) so the dev server
 // (server/claudeChat.ts) and the phone share them. The history lives in localStorage, per device; every access is guarded.
 import { apiFetch } from './apiFetch';
@@ -6,40 +6,40 @@ import type { AiServices } from './claudeProtocol.ts';
 
 export const LOOKUP_MAX_CHARS = 200;
 export const LOOKUP_HISTORY_MAX = 50;
-export const LOOKUP_KEY = 'mugi.lookup.v1';
-export const LOOKUP_LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1', '級外'] as const;
+export const LOOKUP_KEY = 'mugien.lookup.v1';
+export const LOOKUP_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', '其他'] as const;
 export type LookupLevel = (typeof LOOKUP_LEVELS)[number];
 
-export type LookupItem = { ja: string; zh: string; level: LookupLevel; note?: string };
+export type LookupItem = { en: string; zh: string; level: LookupLevel; note?: string };
 export type LookupGrammar = { point: string; level: LookupLevel; explain: string };
-export type LookupExample = { ja: string; zh: string };
-/** `ja` fields keep their <ja>…</ja> wrapper and readings (for display and speech); other fields are plain Chinese */
+export type LookupExample = { en: string; zh: string };
+/** `en` fields keep their <en>…</en> wrapper (for display and speech); other fields are plain Chinese */
 export type LookupAnswer = { message?: string; items: LookupItem[]; grammar: LookupGrammar[]; examples: LookupExample[] };
 
 export type LookupEntry = { id: string; q: string; at: number; answer: LookupAnswer | null; raw?: string };
 
-/** a level as the JLPT lists name it; anything else (口語, 俗語, 外來語, unknown) is 級外 */
+/** a level as the CEFR names it (A1 … C2); anything else (slang, names, unknown) is 其他 */
 export function normalizeLevel(v: unknown): LookupLevel {
-  if (typeof v !== 'string') return '級外';
-  const m = /^\s*n\s*([1-5])\s*$/i.exec(v);
-  return m ? (`N${m[1]}` as LookupLevel) : '級外';
+  if (typeof v !== 'string') return '其他';
+  const m = /^\s*([abc])\s*([12])\s*$/i.exec(v);
+  return m ? (`${m[1].toUpperCase()}${m[2]}` as LookupLevel) : '其他';
 }
 
-/** the badge text shown in the sheet: 「N4」 or 「級外」 */
+/** the badge text shown in the sheet: 「A2」 or 「其他」 */
 export const levelBadge = (level: LookupLevel): string => `「${level}」`;
 
-/** a field with the <ja> tags removed (for display of Chinese text, which must never show raw tags) */
-export const stripJaTags = (s: string): string => s.replace(/<\/?ja>/g, '');
+/** a field with the <en> tags removed (for display of Chinese text, which must never show raw tags) */
+export const stripEnTags = (s: string): string => s.replace(/<\/?en>/g, '');
 
-/** a Japanese field wrapped in <ja>…</ja> (the model sometimes leaves the tags off) */
-function jaField(v: unknown): string {
+/** an English field wrapped in <en>…</en> (the model sometimes leaves the tags off) */
+function enField(v: unknown): string {
   if (typeof v !== 'string') return '';
   const t = v.trim();
   if (!t) return '';
-  return /<ja>[\s\S]*<\/ja>/.test(t) ? t : `<ja>${stripJaTags(t)}</ja>`;
+  return /<en>[\s\S]*<\/en>/.test(t) ? t : `<en>${stripEnTags(t)}</en>`;
 }
 
-const textField = (v: unknown): string => (typeof v === 'string' ? stripJaTags(v).trim() : '');
+const textField = (v: unknown): string => (typeof v === 'string' ? stripEnTags(v).trim() : '');
 
 /**
  * The model's reply as an answer. Code fences and text around the JSON are tolerated (the first { … } is taken).
@@ -58,31 +58,29 @@ export function parseLookupText(text: string): LookupAnswer | null {
   const o = j as Record<string, unknown>;
   const arr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object') : []);
   const items: LookupItem[] = arr(o.items).flatMap((x) => {
-    const ja = jaField(x.ja);
+    const en = enField(x.en);
     const zh = textField(x.zh);
-    if (!ja && !zh) return [];
+    if (!en && !zh) return [];
     const note = textField(x.note);
-    return [{ ja, zh, level: normalizeLevel(x.level), ...(note ? { note } : {}) }];
+    return [{ en, zh, level: normalizeLevel(x.level), ...(note ? { note } : {}) }];
   });
   const grammar: LookupGrammar[] = arr(o.grammar).flatMap((x) => {
-    const point = jaField(x.point);
+    const point = enField(x.point);
     const explain = textField(x.explain);
     return point || explain ? [{ point, level: normalizeLevel(x.level), explain }] : [];
   });
   const examples: LookupExample[] = arr(o.examples).flatMap((x) => {
-    const ja = jaField(x.ja);
+    const en = enField(x.en);
     const zh = textField(x.zh);
-    return ja ? [{ ja, zh }] : [];
+    return en ? [{ en, zh }] : [];
   });
   const message = textField(o.message);
   if (!items.length && !grammar.length && !examples.length && !message) return null;
   return { ...(message ? { message } : {}), items, grammar, examples };
 }
 
-/** the Japanese of a <ja> field for speech: no tags, no readings (readings are for display only) */
-export const jaSpeakable = (s: string): string => s.replace(/<\/?ja>/g, '').replace(/\[[^[\]]*\]/g, '');
-/** the Japanese of a <ja> field for display (rubyNodes reads the readings) */
-export const jaDisplay = (s: string): string => s.replace(/<\/?ja>/g, '');
+/** the English of an <en> field for speech and display: no tags */
+export const enText = (s: string): string => s.replace(/<\/?en>/g, '');
 
 /** a new lookup goes first; the list is capped (oldest dropped) */
 export function addLookup(list: LookupEntry[], entry: LookupEntry, max = LOOKUP_HISTORY_MAX): LookupEntry[] {

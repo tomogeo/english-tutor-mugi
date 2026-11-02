@@ -64,7 +64,7 @@ html.kb-lock, html.kb-lock body { overflow: hidden; }
 .as-row.as-stack > .as-seg button { flex: 1 1 0; min-width: 0; padding: 7px 4px; white-space: nowrap; }
 /* four engines on a 320 px phone: smaller type so 「iPhone 內建」 fits its button */
 @media (max-width: 360px) { .as-row.as-stack > .as-seg button { font-size: 12px; padding: 7px 2px; letter-spacing: -0.02em; } }
-/* 中文 / 日文 groups in ⚙️ 聲音 */
+/* 英文 / 中文 groups in ⚙️ 聲音 */
 .as-lang { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px; border-top: 1px dashed var(--line); }
 .as-lang h4 { margin: 6px 0 2px; font-size: 14px; color: var(--muted); font-weight: 600; }
 .as-lang-note { min-height: 0; }
@@ -92,10 +92,6 @@ html.kb-lock, html.kb-lock body { overflow: hidden; }
 .tip-verdict.ok { color: #7fc497; }
 .tip-verdict.ng { color: #e07f78; }
 .tip-empty { color: var(--muted); font-size: 13px; padding: 12px 4px; }
-
-/* 漢字の読み仮名 (ui/Furigana): the reading is small and sits above its kanji; the ruby line gets room for it */
-.tutor ruby { ruby-position: over; line-height: 2.1; }
-.tutor rt { font-size: 0.55em; line-height: 1; letter-spacing: 0; }
 
 /* 速查 (ui/LookupSheet): the round button under the lightbulb; dimmed while the Claude AI key is missing (the sheet explains) */
 .as-lookup-btn { display: flex; align-items: center; justify-content: center; }

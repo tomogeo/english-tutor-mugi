@@ -9,8 +9,8 @@ import type { ChatLine } from '../game/chatTypes';
 describe('chat history in localStorage', () => {
   beforeEach(() => localStorage.clear());
 
-  it('each character has its own key; むぎ keeps the original key', () => {
-    expect(tutorChatKey('mugi')).toBe('mugi.tutor.chat.v1');
+  it('each character has its own key; Mugi keeps the original key', () => {
+    expect(tutorChatKey('mugi')).toBe('mugien.tutor.chat.v1');
     expect(tutorChatKey('yui')).not.toBe(tutorChatKey('yuma'));
     writeTutorChat([{ from: 'me', text: 'hi', t: 1 }], 'yui');
     expect(loadTutorChat('mugi')).toEqual([]);
@@ -48,12 +48,12 @@ describe('chat history in localStorage', () => {
   it('the settings save round-trips and a broken save loads the defaults', () => {
     writeTutor({ ...DEFAULT_TUTOR, activeId: 'yui' });
     expect(loadTutor().activeId).toBe('yui');
-    localStorage.setItem('mugi.tutor.v1', '{broken');
+    localStorage.setItem('mugien.tutor.v1', '{broken');
     expect(loadTutor().activeId).toBe('mugi');
   });
 });
 
-// ---------- a fake IndexedDB, just enough for mugi-art (store 'art' and 'background')
+// ---------- a fake IndexedDB, just enough for mugien-art (store 'art' and 'background')
 
 type Rec = Map<string, unknown>;
 function fakeIndexedDB(seed: Record<string, Record<string, unknown>> = {}, failOpen = false) {

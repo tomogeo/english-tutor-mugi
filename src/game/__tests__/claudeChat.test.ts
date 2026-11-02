@@ -46,8 +46,8 @@ describe('prompts (server)', () => {
   });
 
   it('puts the time and the teacher mode in front of the last user message', () => {
-    expect(userTurn('嗨', { timeOfDay: '晚上 9 點' }, 'teacher')).toBe('［情境：晚上 9 點］［模式：日語老師］嗨');
-    expect(userTurn('嗨', {}, 'teacher')).toBe('［模式：日語老師］嗨');
+    expect(userTurn('嗨', { timeOfDay: '晚上 9 點' }, 'teacher')).toBe('［情境：晚上 9 點］［模式：英語老師］嗨');
+    expect(userTurn('嗨', {}, 'teacher')).toBe('［模式：英語老師］嗨');
   });
 
   it('the system block is the stable prompt with its own breakpoint; no top-level marker on the volatile tail', () => {
@@ -200,8 +200,8 @@ describe('tip rewrite (server, mocked client: nothing calls Claude)', () => {
   };
 
   it('uses claude-haiku-5-5, max_tokens 300, no thinking, the fixed system prompt, and a 10 s timeout', async () => {
-    const { client, create } = clientReturning('<tip>要說 <ja>学校[がっこう]に行[い]きました</ja>。</tip>');
-    await rewriteTip(client, '<ja>学校に行きました</ja>、「に」が大事です。');
+    const { client, create } = clientReturning('<tip>要說 <en>I went to school.</en>。</tip>');
+    await rewriteTip(client, 'Say <en>I went to school.</en> Use the past tense.');
     expect(TIP_FIX_MODEL).toBe('claude-haiku-5-5');
     expect(TIP_FIX_TIMEOUT_MS).toBe(10_000);
     const [body, opts] = create.mock.calls[0] as unknown as [Record<string, unknown>, Record<string, unknown>];
@@ -209,17 +209,17 @@ describe('tip rewrite (server, mocked client: nothing calls Claude)', () => {
     expect(body.max_tokens).toBe(300);
     expect(body.thinking).toEqual({ type: 'disabled' });
     expect(body.system).toBe(TIP_FIX_SYSTEM);
-    expect(body.messages).toEqual([{ role: 'user', content: '<ja>学校に行きました</ja>、「に」が大事です。' }]);
+    expect(body.messages).toEqual([{ role: 'user', content: 'Say <en>I went to school.</en> Use the past tense.' }]);
     expect(opts).toEqual({ timeout: 10_000 });
   });
 
-  it('returns the rewritten tip with its readings filled, when it is Chinese', async () => {
-    const { client } = clientReturning('<tip>要說 学校に行きました，去哪裡要用「に」。</tip>');
-    expect(await rewriteTip(client, 'x')).toBe('要說 <ja>学校[がっこう]に行[い]きました</ja>，去哪裡要用「<ja>に</ja>」。');
+  it('returns the rewritten tip with its English wrapped in <en>, when it is Chinese', async () => {
+    const { client } = clientReturning('<tip>要說 I went to school，昨天的事要用過去式。</tip>');
+    expect(await rewriteTip(client, 'x')).toBe('要說 <en>I went to school</en>，昨天的事要用過去式。');
   });
 
-  it('returns null when the rewrite still reads as Japanese (the caller keeps the original)', async () => {
-    const { client } = clientReturning('<tip>ありがとう、行きましょう。</tip>');
+  it('returns null when the rewrite still reads as English (the caller keeps the original)', async () => {
+    const { client } = clientReturning('<tip>Say I went to school. Use the past tense.</tip>');
     expect(await rewriteTip(client, 'x')).toBeNull();
   });
 
@@ -229,7 +229,7 @@ describe('tip rewrite (server, mocked client: nothing calls Claude)', () => {
   });
 
   it('validates the fix-tip body: tip is a non-empty string up to 1000 characters', () => {
-    expect(parseFixTipBody('{"tip":"  要說 <ja>行きましょう</ja>。  "}')).toBe('要說 <ja>行きましょう</ja>。');
+    expect(parseFixTipBody('{"tip":"  要說 <en>行きましょう</en>。  "}')).toBe('要說 <en>行きましょう</en>。');
     expect(() => parseFixTipBody('{"tip":""}')).toThrow();
     expect(() => parseFixTipBody(JSON.stringify({ tip: 'x'.repeat(1001) }))).toThrow();
     expect(() => parseFixTipBody('{nope')).toThrow();

@@ -4,7 +4,7 @@
 //   POST /api/chat        → text/event-stream      data: {"type":"delta"|"done"|"error", …}
 //                           (delta.text: the reply's JSON text as it streams; done.text: the whole reply JSON, see CHAT_REPLY_SCHEMA)
 //   POST /api/chat/judge  → { ok, feedback }        judges a 小提醒 practice line (non-streaming)
-//   POST /api/chat/fix-tip → { ok, tip }            rewrites one 小提醒 that came back with Japanese (Haiku, background)
+//   POST /api/chat/fix-tip → { ok, tip }            rewrites one 小提醒 that came back in English instead of Chinese (Haiku, background)
 // Every upstream call goes through an LlmProvider (server/llm/provider.ts). Each AI request names its services in the order to
 // try them (`providers`, server/aiChain.ts): Claude (the API key) and ChatGPT (the signed-in account, server/openai). A service
 // that cannot take the request (a failure that fallbackWorthy accepts) hands it to the next one.
@@ -15,7 +15,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { loadEnv, type Plugin } from 'vite';
 import {
   CHAT_MAX_MESSAGES, CHAT_MAX_MESSAGE_CHARS, CHAT_MODES, CHAT_ROLES, CHAT_TONES, CLAUDE_MODEL_DEFAULT, NAME_MAX_CHARS, PERSONA_MAX_CHARS,
-  isChatModelId, nameText, personaText, type ChatContext, type ChatModeId, type ChatRoleId,
+  isChatModelId, isTipLang, nameText, personaText, type ChatContext, type ChatModeId, type ChatRoleId, type TipLang,
 } from '../src/game/claudeProtocol.ts';
 import { LOOKUP_MAX_CHARS, parseLookupText, type LookupAnswer } from '../src/game/lookup.ts';
 import { fallbackWorthy, firstServing, parseRouting, routingOf, type Routing, type Service } from './aiChain.ts';
@@ -24,12 +24,11 @@ import { createChatGpt, type ChatGptService } from './openai/service.ts';
 import { dataDirectory, defaultProtector, openCredentialStore } from './openai/credentials.ts';
 import { handleAuthCallback, handleOpenAiApi } from './openai/routes.ts';
 import { JUDGE_PROMPT, LOOKUP_SYSTEM, TIP_FIX_SYSTEM, defaultPersona, reminderPrompt, systemPrompt } from './prompts.ts';
-import { fixReplyJson, isChineseTip, wrapJapanese } from './replyFix.ts';
-import { fillReadings, loadAnalyzer } from './readings.ts';
+import { fixReplyJson, isChineseTip, wrapEnglish } from './replyFix.ts';
 import { dailyLimitHit, getUsageStore, type ClaudeUsage, type UsageStore } from './usage.ts';
 import { guardApi, guardOptionsFrom } from './apiGuard.ts';
 import { handleSettingsApi } from './settingsRoutes.ts';
-import { PROJECT_ROOT } from './voicevoxProcess.ts';
+import { PROJECT_ROOT } from './projectRoot.ts';
 import { anthropicProvider, describeAnthropicError } from './llm/anthropicProvider.ts';
 import type { LlmChatRequest, LlmProvider, LlmResult, LlmStream } from './llm/provider.ts';
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages';
@@ -45,6 +44,8 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 /** `model`, `persona` and `name` are optional: absent, the server's own model, the default personality and the default name are used */
 export type ChatBody = {
   messages: ChatMessage[]; role: ChatRoleId; mode: ChatModeId; context: ChatContext; model?: string; persona?: string; name?: string;
+  /** the language of her 小提醒 (absent: Chinese) */
+  tipLang?: TipLang;
   /** the services to try, in order (see server/aiChain.ts) */
   routing: Routing;
 };
@@ -361,9 +362,11 @@ export function parseChatBody(raw: string): ChatBody {
   const persona = parsePersona(b.persona);
   const name = parseName(b.name);
   const routing = parseRouting(b);
+  if (b.tipLang !== undefined && b.tipLang !== null && !isTipLang(b.tipLang)) throw bad('tipLang 錯誤');
+  const tipLang = isTipLang(b.tipLang) ? b.tipLang : undefined;
   return {
     messages, role: b.role as ChatRoleId, mode: b.mode as ChatModeId, context,
-    ...(model ? { model } : {}), ...(persona ? { persona } : {}), ...(name ? { name } : {}), routing,
+    ...(model ? { model } : {}), ...(persona ? { persona } : {}), ...(name ? { name } : {}), ...(tipLang ? { tipLang } : {}), routing,
   };
 }
 
@@ -377,10 +380,10 @@ export function parseChatBody(raw: string): ChatBody {
  * is the end of the stable history. The newest user turn carries no breakpoint: its bytes (the reminder) are volatile and
  * are re-sent without it next turn, so caching them would never hit again.
  */
-export function upstreamMessages(messages: ChatMessage[]): BetaMessageStreamParams['messages'] {
+export function upstreamMessages(messages: ChatMessage[], tipLang: TipLang = 'zh'): BetaMessageStreamParams['messages'] {
   const n = messages.length;
   return messages.map((m, i) => {
-    const text = i === n - 1 ? `${m.content}\n\n<reminder>${reminderPrompt()}</reminder>` : m.content;
+    const text = i === n - 1 ? `${m.content}\n\n<reminder>${reminderPrompt(tipLang)}</reminder>` : m.content;
     if (i === n - 2) {
       return { role: m.role, content: [{ type: 'text', text, cache_control: { type: 'ephemeral' } }] };
     }
@@ -390,8 +393,8 @@ export function upstreamMessages(messages: ChatMessage[]): BetaMessageStreamPara
 
 /**
  * Her chat reply (Structured Outputs): the API guarantees this shape. The reply is streamed as its JSON text and read on the
- * client while it arrives (game/claudeBrain.ts ReplyJsonParser). segments: her Japanese in order, each with its Chinese
- * gloss (lang is 'ja' in the teacher mode); tip: a Chinese 小提醒, '' for none; tone: how she says it. The schema is a
+ * client while it arrives (game/claudeBrain.ts ReplyJsonParser). segments: her English in order, each with its Chinese
+ * gloss (lang is 'en' in the teacher mode); tip: a 小提醒, '' for none; tone: how she says it. The schema is a
  * constant, so the request prefix (system block) stays byte-identical for the prompt cache.
  */
 export const CHAT_REPLY_SCHEMA = {
@@ -406,7 +409,7 @@ export const CHAT_REPLY_SCHEMA = {
         additionalProperties: false,
         required: ['lang', 'text', 'gloss'],
         properties: {
-          lang: { type: 'string', enum: ['ja', 'zh'] },
+          lang: { type: 'string', enum: ['en', 'zh'] },
           text: { type: 'string' },
           gloss: { type: 'string' },
         },
@@ -435,7 +438,7 @@ export function chatRequest(body: ChatBody, model: string): LlmChatRequest {
     // keeps the reply's shape, the fallback only adds a retry.
     fallbacks: 'default',
     system: [{ type: 'text', text: systemPrompt(body.role, body.persona, body.name), cache_control: { type: 'ephemeral' } }],
-    messages: upstreamMessages(body.messages),
+    messages: upstreamMessages(body.messages, body.tipLang),
   };
 }
 
@@ -610,8 +613,8 @@ export function tipFromFixReply(text: string): string {
 }
 
 /**
- * Rewrites one 小提醒 that came back with Japanese prose. The inner text (with its <ja> tags) goes in; the rewritten tip
- * comes back with its readings filled, or null when it still does not read as Chinese.
+ * Rewrites one 小提醒 that came back in English prose. The inner text (with its <en> tags) goes in; the rewritten tip
+ * comes back with its English wrapped in <en>, or null when it still does not read as Chinese.
  */
 export async function rewriteTipWith(
   provider: LlmProvider,
@@ -631,7 +634,7 @@ export async function rewriteTipWith(
   onUsage?.(msg.model || model, msg.usage as ClaudeUsage);
   const inner = tipFromFixReply(msg.text);
   if (!inner) return null;
-  const fixed = await fillReadings(wrapJapanese(inner), (w) => console.warn(w));
+  const fixed = wrapEnglish(inner);
   return isChineseTip(fixed) ? fixed : null;
 }
 
@@ -675,7 +678,7 @@ async function handleFixTip(req: IncomingMessage, res: ServerResponse, root: str
     });
     if (!r.ok) return upstreamFailure(res, r);
     return r.value === null
-      ? json(res, 200, { ok: false, message: '仍是日文，保留原本的小提醒', provider: r.served.id })
+      ? json(res, 200, { ok: false, message: '仍是英文，保留原本的小提醒', provider: r.served.id })
       : json(res, 200, { ok: true, tip: r.value, provider: r.served.id });
   } finally {
     releaseChatSlot();
@@ -809,9 +812,9 @@ async function handleChat(req: IncomingMessage, res: ServerResponse, root: strin
           send({ type: 'error', message: '（她有點不好意思，別過頭去）這個話題我們換一個好不好？' });
           return;
         }
-        // the reply as shown and stored: her JSON with the readings filled and the tip read (server/replyFix.ts). tipRewrite:
-        // the tip is to be rewritten in the background (the client calls /api/chat/fix-tip once for it)
-        const fixed = clientGone ? { json: final.text, tipRewrite: false } : await fixReplyJson(final.text, { log: (m) => console.warn(m) });
+        // the reply as shown and stored: her JSON with the tip read (server/replyFix.ts). tipRewrite: the tip is to be rewritten
+        // in the background (the client calls /api/chat/fix-tip once for it)
+        const fixed = clientGone ? { json: final.text, tipRewrite: false } : await fixReplyJson(final.text, { log: (m) => console.warn(m), tipLang: body.tipLang });
         send({ type: 'done', text: fixed.json, usage: final.usage, tipRewrite: fixed.tipRewrite, provider: svc.id, model: svc.model });
       },
       failed: (svc, e) => {
@@ -839,8 +842,6 @@ export function claudeChatPlugin(): Plugin {
       mode = cfg.mode;
     },
     configureServer(server) {
-      // load the reading analyser now, not on the first reply (its dictionary takes about a second)
-      loadAnalyzer().catch((e: unknown) => console.warn('[readings]', e instanceof Error ? e.message : e));
       // the ChatGPT sign-in is read now too (its key unlock may take a second on Windows); a failure is logged there
       chatGptService();
       const guard = guardOptionsFrom(server);
@@ -903,7 +904,7 @@ export function claudeChatPlugin(): Plugin {
   };
 }
 
-// ---------------------------------------------------------------- 速查: one Japanese lookup (POST /api/lookup, no persona)
+// ---------------------------------------------------------------- 速查: one English lookup (POST /api/lookup, no persona)
 
 /** the lookup always runs on this model, with no thinking and a small budget (see prompts.ts LOOKUP_SYSTEM) */
 export const LOOKUP_MODEL = 'claude-haiku-5-5';
@@ -922,12 +923,12 @@ export const LOOKUP_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          ja: { type: 'string' },
+          en: { type: 'string' },
           zh: { type: 'string' },
-          level: { type: 'string', enum: ['N5', 'N4', 'N3', 'N2', 'N1', '級外'] },
+          level: { type: 'string', enum: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', '其他'] },
           note: { type: 'string' },
         },
-        required: ['ja', 'zh', 'level', 'note'],
+        required: ['en', 'zh', 'level', 'note'],
         additionalProperties: false,
       },
     },
@@ -937,7 +938,7 @@ export const LOOKUP_SCHEMA = {
         type: 'object',
         properties: {
           point: { type: 'string' },
-          level: { type: 'string', enum: ['N5', 'N4', 'N3', 'N2', 'N1', '級外'] },
+          level: { type: 'string', enum: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', '其他'] },
           explain: { type: 'string' },
         },
         required: ['point', 'level', 'explain'],
@@ -948,8 +949,8 @@ export const LOOKUP_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { ja: { type: 'string' }, zh: { type: 'string' } },
-        required: ['ja', 'zh'],
+        properties: { en: { type: 'string' }, zh: { type: 'string' } },
+        required: ['en', 'zh'],
         additionalProperties: false,
       },
     },
@@ -994,8 +995,7 @@ export function parseLookupBody(raw: string): string {
 }
 
 /**
- * One lookup: the model's reply parsed into an answer (null when it is not readable JSON: the raw text goes back instead),
- * and every <ja> field gets the kanji readings it lacks (readings.ts), as the chat replies do.
+ * One lookup: the model's reply parsed into an answer (null when it is not readable JSON: the raw text goes back instead).
  */
 export async function lookupAnswerWith(
   provider: LlmProvider,
@@ -1015,11 +1015,6 @@ export async function lookupAnswerWith(
   onUsage?.(msg.model || model, msg.usage as ClaudeUsage);
   const raw = msg.text.trim();
   const answer = parseLookupText(raw);
-  if (!answer) return { answer: null, raw };
-  const log = (m: string) => console.warn(m);
-  for (const it of answer.items) it.ja = await fillReadings(it.ja, log);
-  for (const g of answer.grammar) if (g.point) g.point = await fillReadings(g.point, log);
-  for (const ex of answer.examples) ex.ja = await fillReadings(ex.ja, log);
   return { answer, raw };
 }
 

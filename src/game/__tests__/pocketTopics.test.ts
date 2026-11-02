@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { POCKET_TOPICS, nextPocketTopic, plainJa } from '../pocketTopics';
+import { POCKET_TOPICS, nextPocketTopic } from '../pocketTopics';
 
 function fakeStorage() {
   const m = new Map<string, string>();
@@ -30,17 +30,14 @@ describe('pocket topics', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('has exactly 100 topics, each with zh, ja and jaZh', () => {
+  it('has exactly 100 distinct topics, each with English and its Chinese meaning', () => {
     expect(POCKET_TOPICS.length).toBe(100);
+    expect(new Set(POCKET_TOPICS.map((t) => t.en)).size).toBe(100);
     for (const t of POCKET_TOPICS) {
       expect(t.zh.length).toBeGreaterThan(0);
-      expect(t.ja.length).toBeGreaterThan(0);
-      expect(t.jaZh.length).toBeGreaterThan(0);
+      expect(t.en).toMatch(/^[A-Z][\p{L}0-9 ,.'’?!-]+$/u);
+      expect(t.zh).toMatch(/\p{Script=Han}/u);
     }
-  });
-
-  it('plainJa removes the readings', () => {
-    expect(plainJa('今日[きょう]はどうだった？')).toBe('今日はどうだった？');
   });
 
   it('the first 100 picks are all distinct, before any repeat', () => {

@@ -31,7 +31,7 @@ describe('SoundSection', () => {
     expect(r.host.querySelector('h3')?.textContent).toBe('聲音');
     expect(labels(r.host)).toEqual(['靜音', '音樂', '語音', '朗讀回覆']);
     expect(r.host.querySelectorAll('input.slider')).toHaveLength(2);
-    expect([...r.host.querySelectorAll('[data-group]')].map((g) => g.getAttribute('data-group'))).toEqual(['中文', '日文']);
+    expect([...r.host.querySelectorAll('[data-group]')].map((g) => g.getAttribute('data-group'))).toEqual(['英文', '中文']);
     expect(r.host.textContent).toContain('雲端語音檢查中');
     r.unmount();
   });
@@ -43,7 +43,7 @@ describe('SoundSection', () => {
   });
 
   it('reports the missing cloud keys once the status is known', () => {
-    const cloud = { azure: false, google: true, voicevox: true, voices: {} } as never;
+    const cloud = { azure: false, google: true, voices: {} } as never;
     const r = render(<SoundSection audio={AUDIO} tts={TTS} cloud={cloud} />);
     expect(r.host.textContent).toContain('Azure／Google 需要在 .env.local 填金鑰');
     r.unmount();

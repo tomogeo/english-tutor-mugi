@@ -10,9 +10,9 @@ import type { ChatLine } from '../game/chatTypes';
 import { parseChatBody } from '../../server/claudeChat';
 
 const NOW = 1_800_000_000_000;
-const me = (text: string, t = NOW): ChatLine => ({ from: 'me', text, t, sent: `［模式：日語老師］${text}` });
+const me = (text: string, t = NOW): ChatLine => ({ from: 'me', text, t, sent: `［模式：英語老師］${text}` });
 const her = (text: string, t = NOW): ChatLine => ({
-  from: 'her', text, t, sent: `{"segments":[{"lang":"ja","text":"${text}","gloss":"x"}],"tip":"","tone":"happy"}`,
+  from: 'her', text, t, sent: `{"segments":[{"lang":"en","text":"${text}","gloss":"x"}],"tip":"","tone":"happy"}`,
 });
 const tip = (t = NOW): ChatLine => ({ from: 'her', text: '小提醒', t, tip: true });
 
@@ -84,15 +84,15 @@ describe('persona and name change', () => {
     const lines = [old, { ...her('b'), pk: personaKey('', '') }];
     const same = markPersonaReset([...lines, { ...me('c'), pk: '' }], '');
     expect(same[same.length - 1].win).toBeUndefined();
-    const changedKey = personaKey('親切的老師', 'むぎ');
+    const changedKey = personaKey('親切的老師', 'Mugi');
     const changed = markPersonaReset([...lines, { ...me('c'), pk: changedKey }], changedKey);
     expect(changed[changed.length - 1].win).toBe(true);
   });
 
   it('a name change alone changes the key; the default name keeps the persona-only key', () => {
-    expect(personaKey('', 'むぎ')).toBe(personaKey('', undefined));
-    expect(personaKey('', '小春')).not.toBe(personaKey('', 'むぎ'));
-    expect(personaKey('同一段', '小春')).not.toBe(personaKey('同一段', 'むぎ'));
+    expect(personaKey('', 'Mugi')).toBe(personaKey('', undefined));
+    expect(personaKey('', '小春')).not.toBe(personaKey('', 'Mugi'));
+    expect(personaKey('同一段', '小春')).not.toBe(personaKey('同一段', 'Mugi'));
   });
 
   it('old saves (no pk) never trigger a persona reset', () => {
@@ -132,7 +132,7 @@ describe('message text sent to the server', () => {
 describe('her long replies sent back to the server', () => {
   it('a reply JSON over 2000 characters is fitted: still valid JSON, at most 2000 characters', async () => {
     const { fitReplyJson, isReplyJson } = await import('../game/replyJson');
-    const segs = Array.from({ length: 300 }, (_, i) => ({ lang: 'ja' as const, text: `これは文章${i}です、とても長い文章です`, gloss: `這是第${i}句很長的中文說明文字` }));
+    const segs = Array.from({ length: 300 }, (_, i) => ({ lang: 'en' as const, text: `これは文章${i}です、とても長い文章です`, gloss: `這是第${i}句很長的中文說明文字` }));
     const big = JSON.stringify({ segments: segs, tip: '', tone: 'explain' });
     expect(big.length).toBeGreaterThan(CHAT_MAX_MESSAGE_CHARS);
     const fitted = fitReplyJson(big, CHAT_MAX_MESSAGE_CHARS);
@@ -142,7 +142,7 @@ describe('her long replies sent back to the server', () => {
   });
 
   it('a long reply stored as its JSON reaches the server within the length limit', () => {
-    const segs = Array.from({ length: 300 }, (_, i) => ({ lang: 'ja', text: `文章${i}です`, gloss: `說明${i}` }));
+    const segs = Array.from({ length: 300 }, (_, i) => ({ lang: 'en', text: `文章${i}です`, gloss: `說明${i}` }));
     const line: ChatLine = { from: 'her', text: 'x', t: NOW, sent: JSON.stringify({ segments: segs, tip: '', tone: 'explain' }) };
     const out = toApiMessages([me('問'), line, me('下一句')]);
     expect(out[1].content.length).toBeLessThanOrEqual(CHAT_MAX_MESSAGE_CHARS);
