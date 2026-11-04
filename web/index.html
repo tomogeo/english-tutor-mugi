@@ -1,0 +1,713 @@
+<title>Mugi 英語家教</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: one-screen app — classroom scene fills the screen, a top bar of round buttons, her speech bubble, and a chat dock at the bottom; sheets slide up over the scene. Deliberately dark (the original app's monochrome look), single theme. */
+:root {
+  --ink: #f4f3ee;          /* text on dark */
+  --muted: #a9a8a1;
+  --panel: #161615;        /* sheets and dock */
+  --panel-2: #22221f;      /* inputs, rows */
+  --line: #3a3a35;
+  --chalk: #f4f3ee;        /* primary buttons (white on black, like chalk) */
+  --chalk-ink: #141413;
+  --good: #7fc497;
+  --bad: #e58a80;
+  --font-ui: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-en: "Nunito", "Noto Sans TC", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: #0f0f12; color: var(--ink); font-family: var(--font-ui); font-size: 16px; overflow: hidden; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--chalk); outline-offset: 2px; }
+.app { position: relative; height: 100%; overflow: hidden; }
+
+/* scene */
+.stage { position: absolute; inset: 0; overflow: hidden; }
+.stage::before { content: ""; position: absolute; inset: -40px; background: url("img/classroom.webp") center 62% / cover no-repeat; filter: blur(22px) brightness(.55); }
+.scene { position: absolute; background: url("img/classroom.webp") center / 100% 100% no-repeat; }
+.figure { position: absolute; }
+.figure img { position: absolute; display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+.figure .mouth { width: auto; }
+
+/* top bar */
+.top { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px;
+  padding: 10px max(12px, env(safe-area-inset-right, 0px)) 10px max(12px, env(safe-area-inset-left, 0px)); }
+.who { flex: 1; min-width: 0; text-align: center; text-shadow: 0 1px 6px rgba(0,0,0,.7); }
+.who b { display: block; font-family: var(--font-en); font-size: 22px; font-weight: 800; letter-spacing: .02em; }
+.who small { color: #ddd; font-size: 13px; }
+.round { position: relative; width: 44px; height: 44px; flex: none; border-radius: 50%; border: 0; background: rgba(20,20,19,.88); display: grid; place-items: center; cursor: pointer; }
+.round svg { width: 22px; height: 22px; }
+.badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--chalk); color: var(--chalk-ink); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+
+/* bubble */
+.bubble { position: absolute; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); top: 68px;
+  margin: 0 auto; max-width: 560px; padding: 12px 16px; border-radius: 18px; background: rgba(20,20,19,.9); line-height: 1.5; cursor: pointer; }
+.bubble b { display: block; font-size: 13px; color: var(--muted); font-weight: 500; }
+.en { font-family: var(--font-en); font-weight: 600; }
+
+/* chat dock */
+.dock { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 8px;
+  padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+.history { max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 20px; background: rgba(20,20,19,.92); margin: 0; list-style: none; }
+.history li { max-width: 86%; padding: 9px 13px; border-radius: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.history .me { align-self: flex-end; background: var(--chalk); color: var(--chalk-ink); }
+.history .her { align-self: flex-start; background: var(--panel-2); cursor: pointer; }
+.history .tip { align-self: flex-start; background: transparent; border: 1px dashed var(--line); cursor: default; }
+.history .tip small { display: block; font-weight: 700; color: var(--muted); }
+.history .hint { align-self: center; color: var(--muted); font-size: 14px; text-align: center; max-width: 100%; }
+.notes { font-size: 13px; color: #ddd; text-align: center; text-shadow: 0 1px 4px #000; min-height: 0; }
+.notes:empty { display: none; }
+.bar { display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 28px; background: var(--panel); }
+.bar input { flex: 1; min-width: 0; height: 44px; border: 0; border-radius: 22px; background: var(--panel-2); color: var(--ink); padding: 0 14px; font-size: 16px; }
+.pill { height: 44px; min-width: 44px; padding: 0 10px; border: 0; border-radius: 22px; background: var(--panel-2); cursor: pointer; flex: none; display: grid; place-items: center; }
+.pill svg { width: 20px; height: 20px; }
+.pill.on { background: var(--chalk); color: var(--chalk-ink); }
+.send { background: var(--chalk); color: var(--chalk-ink); font-weight: 700; padding: 0 16px; }
+.send:disabled { opacity: .45; cursor: default; }
+
+/* sheets */
+.veil { position: absolute; inset: 0; z-index: 10; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 640px; max-height: 82%; overflow-y: auto; background: var(--panel); border-radius: 22px 22px 0 0;
+  padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.sheet > * { flex: none; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet-head strong { font-size: 22px; }
+.x { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 24px; line-height: 1; }
+.sheet h3 { margin: 6px 0 0; font-size: 14px; color: var(--muted); font-weight: 500; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.row > span { min-width: 0; }
+.row small { display: block; color: var(--muted); font-size: 13px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.seg button { flex: 1; border: 0; padding: 10px 12px; background: transparent; cursor: pointer; }
+.seg button[aria-checked="true"] { background: var(--chalk); color: var(--chalk-ink); font-weight: 700; }
+.small-btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 8px 14px; cursor: pointer; flex: none; }
+.small-btn.danger { color: var(--bad); }
+.small-btn.on { background: var(--chalk); color: var(--chalk-ink); }
+select, .sheet input[type=text] { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 16px; max-width: 100%; }
+input[type=checkbox] { width: 24px; height: 24px; accent-color: var(--chalk); flex: none; }
+input[type=range] { flex: 1; accent-color: var(--chalk); }
+.chars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.char { border: 2px solid var(--line); background: var(--panel-2); border-radius: 16px; padding: 10px 6px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.char[aria-pressed="true"] { border-color: var(--chalk); }
+.char img { height: 96px; width: auto; object-fit: contain; }
+.char b { font-family: var(--font-en); }
+.char small { color: var(--muted); font-size: 12px; text-align: center; }
+.card { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.card p { margin: 0; line-height: 1.55; }
+.target { align-self: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; background: transparent; cursor: pointer; text-align: left; }
+.target[aria-pressed="true"] { background: var(--chalk); color: var(--chalk-ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.typed { display: flex; gap: 8px; }
+.typed input { flex: 1; min-width: 0; }
+.verdict.ok { color: var(--good); }
+.verdict.ng { color: var(--bad); }
+.muted { color: var(--muted); font-size: 14px; }
+.lvl { display: inline-block; font-size: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 1px 6px; margin-right: 6px; font-family: var(--font-en); }
+.lk-en { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 18px; }
+.speak { border: 0; background: transparent; cursor: pointer; padding: 2px; }
+.speak svg { width: 20px; height: 20px; }
+.banner { position: absolute; z-index: 6; left: 50%; transform: translateX(-50%); top: 64px; width: min(560px, calc(100% - 32px)); padding: 12px 14px; border-radius: 14px; background: #3a2a1a; color: #ffe1bd; font-size: 14px; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="app" id="app">
+  <div class="stage" id="stage"><div class="scene" id="scene"><div class="figure" id="figure"></div></div></div>
+
+  <header class="top">
+    <button class="round" id="btnChar" aria-label="人物"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
+    <div class="who"><b id="whoName">Mugi</b><small id="whoSub">倉鼠・英語家教</small></div>
+    <button class="round" id="btnSettings" aria-label="設定"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <button class="round" id="btnTips" aria-label="小提醒本"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M9 9h6M9 13h6"/></svg><span class="badge" id="tipBadge" hidden>0</span></button>
+    <button class="round" id="btnLookup" aria-label="速查"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/></svg></button>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+  <div class="bubble" id="bubble" hidden><b id="bubbleName"></b><span id="bubbleText"></span></div>
+
+  <section class="dock">
+    <ul class="history" id="history" aria-live="polite"></ul>
+    <div class="notes" id="notes" role="status"></div>
+    <form class="bar" id="form">
+      <button type="button" class="pill" id="btnHist" aria-label="收合對話紀錄" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+      <input id="input" autocomplete="off" enterkeyhint="send" maxlength="600" placeholder="和 Mugi 練習…" aria-label="輸入要說的話">
+      <button type="button" class="pill" id="btnLang" aria-label="語音辨識語言">英</button>
+      <button type="button" class="pill" id="btnMic" aria-label="語音輸入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <button type="button" class="pill" id="btnTopic" aria-label="換她開話題" title="換她開話題"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h12v9H8l-4 4z"/><path d="M19 3v6M16 6h6"/></svg></button>
+      <button type="submit" class="pill send" id="btnSend">送出</button>
+    </form>
+  </section>
+
+  <div class="veil" id="veil" hidden><section class="sheet" id="sheet" role="dialog"></section></div>
+</div>
+
+<script type="application/json" id="topicsData">[{"en": "How was your day today? Anything fun happen?", "zh": "今天過得怎麼樣？有發生什麼好玩的事嗎？"}, {"en": "What do you usually have for breakfast?", "zh": "你早餐通常吃什麼？"}, {"en": "If you had a whole day off tomorrow, what would you do?", "zh": "如果明天放一整天假，你會做什麼？"}, {"en": "What's your favorite season, and why?", "zh": "你最喜歡哪個季節？為什麼？"}, {"en": "What did you want to be when you were a kid?", "zh": "你小時候想當什麼？"}, {"en": "Are you watching any good shows right now?", "zh": "你最近有在追什麼好看的劇嗎？"}, {"en": "Are you a cat person or a dog person?", "zh": "你是貓派還是狗派？"}, {"en": "If you could travel anywhere, where would you go?", "zh": "如果哪裡都能去，你想去哪裡旅行？"}, {"en": "Do you prefer sweet snacks or salty snacks?", "zh": "你喜歡甜的還是鹹的零食？"}, {"en": "Have you been getting enough sleep lately?", "zh": "你最近睡得夠嗎？"}, {"en": "What kind of music do you like?", "zh": "你喜歡什麼樣的音樂？"}, {"en": "Are you a morning person or a night owl?", "zh": "你是早起型的人還是夜貓子？"}, {"en": "How's the weather where you are today?", "zh": "你那邊今天天氣怎麼樣？"}, {"en": "Is there anything new you want to learn this year?", "zh": "今年有什麼想學的新東西嗎？"}, {"en": "What's the best meal you've ever had?", "zh": "你吃過最好吃的一餐是什麼？"}, {"en": "Do you like rainy days?", "zh": "你喜歡下雨天嗎？"}, {"en": "Is there a place you've always wanted to visit?", "zh": "有沒有一個你一直很想去的地方？"}, {"en": "What do you usually do on weekends?", "zh": "你週末通常都做什麼？"}, {"en": "What's your favorite color?", "zh": "你最喜歡什麼顏色？"}, {"en": "Do you like to cook? What's your best dish?", "zh": "你喜歡做菜嗎？拿手菜是什麼？"}, {"en": "If you could have one superpower, what would it be?", "zh": "如果可以有一種超能力，你想要什麼？"}, {"en": "What's something small that made you happy recently?", "zh": "最近有什麼小事讓你很開心？"}, {"en": "Coffee or tea?", "zh": "咖啡還是茶？"}, {"en": "When do you feel the most relaxed?", "zh": "你什麼時候最放鬆？"}, {"en": "Do you play any games?", "zh": "你有在玩什麼遊戲嗎？"}, {"en": "Have you had enough water today?", "zh": "你今天有喝夠水嗎？"}, {"en": "Beach or mountains?", "zh": "海邊還是山上？"}, {"en": "Is anything on your mind lately? You can tell me.", "zh": "最近有什麼心事嗎？可以跟我說喔。"}, {"en": "What do you think your best quality is?", "zh": "你覺得你最大的優點是什麼？"}, {"en": "Do you like movies? Seen anything good lately?", "zh": "你喜歡看電影嗎？最近有看到好看的嗎？"}, {"en": "Do you collect anything?", "zh": "你有在收集什麼東西嗎？"}, {"en": "If you could have any pet, what would you choose?", "zh": "如果什麼寵物都能養，你會選什麼？"}, {"en": "Do you play any sports?", "zh": "你有在做什麼運動嗎？"}, {"en": "What are your plans for tomorrow?", "zh": "你明天有什麼計畫？"}, {"en": "What kind of clothes do you like to wear?", "zh": "你喜歡穿什麼風格的衣服？"}, {"en": "What do you usually do before bed?", "zh": "你睡前通常做什麼？"}, {"en": "What's the most important thing in life for you?", "zh": "對你來說，人生中最重要的是什麼？"}, {"en": "How do you get to work or school every day?", "zh": "你每天怎麼去上班或上學？"}, {"en": "What's your favorite street food?", "zh": "你最喜歡什麼路邊小吃？"}, {"en": "Have you tried any Vietnamese food you really liked?", "zh": "你有吃過哪道很喜歡的越南菜嗎？"}, {"en": "What's the traffic like where you live?", "zh": "你住的地方交通怎麼樣？"}, {"en": "Do you have a favorite café?", "zh": "你有喜歡的咖啡廳嗎？"}, {"en": "What's one thing you're looking forward to this month?", "zh": "這個月你最期待的一件事是什麼？"}, {"en": "What did you have for lunch today?", "zh": "你今天午餐吃了什麼？"}, {"en": "Do you prefer to stay home or go out on Friday nights?", "zh": "週五晚上你喜歡待在家還是出門？"}, {"en": "What's the last book you read?", "zh": "你最近讀的一本書是什麼？"}, {"en": "Do you have any brothers or sisters?", "zh": "你有兄弟姊妹嗎？"}, {"en": "What's your hometown like?", "zh": "你的家鄉是什麼樣的地方？"}, {"en": "What's a skill you're proud of?", "zh": "你有什麼引以為傲的技能？"}, {"en": "What app do you use the most on your phone?", "zh": "你手機上最常用哪個 App？"}, {"en": "Do you like shopping online or in stores?", "zh": "你喜歡網購還是去實體店買？"}, {"en": "What's the best trip you've ever taken?", "zh": "你最棒的一次旅行是哪一次？"}, {"en": "What do you do when you feel stressed?", "zh": "你壓力大的時候會做什麼？"}, {"en": "Are you a planner, or do you go with the flow?", "zh": "你是喜歡計畫的人，還是隨遇而安？"}, {"en": "What's something you've wanted to try but haven't yet?", "zh": "有什麼你一直想試但還沒試過的事？"}, {"en": "What's your favorite holiday?", "zh": "你最喜歡哪個節日？"}, {"en": "How do you usually celebrate your birthday?", "zh": "你通常怎麼過生日？"}, {"en": "What's a song you've been listening to a lot?", "zh": "你最近一直在聽哪首歌？"}, {"en": "Do you like spicy food?", "zh": "你喜歡吃辣嗎？"}, {"en": "What's your favorite fruit?", "zh": "你最喜歡什麼水果？"}, {"en": "If you won the lottery, what's the first thing you'd buy?", "zh": "如果中了樂透，你第一個會買什麼？"}, {"en": "What was your favorite subject in school?", "zh": "你以前在學校最喜歡哪一科？"}, {"en": "Who's someone you really look up to?", "zh": "有沒有你很崇拜的人？"}, {"en": "What's a good piece of advice someone gave you?", "zh": "有人給過你什麼很棒的建議？"}, {"en": "Do you keep plants at home?", "zh": "你家裡有種植物嗎？"}, {"en": "What's your dream job?", "zh": "你的夢想工作是什麼？"}, {"en": "How do you like to spend a rainy afternoon?", "zh": "下雨的午後你喜歡怎麼度過？"}, {"en": "Do you like taking photos? What do you usually shoot?", "zh": "你喜歡拍照嗎？通常拍什麼？"}, {"en": "What's the funniest thing that happened to you this week?", "zh": "這週發生在你身上最好笑的事是什麼？"}, {"en": "Do you remember your first job?", "zh": "你還記得你的第一份工作嗎？"}, {"en": "What's something you always carry with you?", "zh": "有什麼東西是你一定會隨身帶著的？"}, {"en": "Do you prefer the city or the countryside?", "zh": "你比較喜歡城市還是鄉下？"}, {"en": "What languages would you like to speak someday?", "zh": "你希望有一天會說哪些語言？"}, {"en": "Why are you learning English?", "zh": "你為什麼在學英文？"}, {"en": "What's the hardest part of English for you?", "zh": "對你來說英文最難的是哪個部分？"}, {"en": "Do you watch videos or shows in English?", "zh": "你會看英文的影片或節目嗎？"}, {"en": "What's a word in English you really like?", "zh": "有沒有哪個英文單字你特別喜歡？"}, {"en": "How do you usually spend your evenings?", "zh": "你晚上通常怎麼度過？"}, {"en": "What did you do last weekend?", "zh": "你上週末做了什麼？"}, {"en": "What's the best gift you've ever received?", "zh": "你收過最棒的禮物是什麼？"}, {"en": "Do you like cooking at home or eating out?", "zh": "你喜歡在家煮還是出去吃？"}, {"en": "What's a habit you'd like to start?", "zh": "你想養成什麼好習慣？"}, {"en": "How do you stay healthy?", "zh": "你怎麼保持健康？"}, {"en": "Have you ever been to a concert?", "zh": "你有去過演唱會嗎？"}, {"en": "What's your favorite way to exercise?", "zh": "你最喜歡用什麼方式運動？"}, {"en": "What would your perfect day look like?", "zh": "你心目中完美的一天是什麼樣子？"}, {"en": "What's something that always makes you laugh?", "zh": "有什麼東西總是能讓你笑出來？"}, {"en": "Do you prefer hot weather or cold weather?", "zh": "你喜歡熱天還是冷天？"}, {"en": "What's one place in your city you'd show a visitor?", "zh": "如果有朋友來玩，你會帶他去你城市的哪個地方？"}, {"en": "What do you like most about where you live?", "zh": "你最喜歡你住的地方哪一點？"}, {"en": "What's a food you didn't like as a kid but like now?", "zh": "有什麼食物是你小時候不喜歡、現在卻喜歡的？"}, {"en": "Do you like getting up early on weekends?", "zh": "你週末喜歡早起嗎？"}, {"en": "What's something you're grateful for today?", "zh": "今天有什麼讓你覺得感恩的事？"}, {"en": "Who do you talk to the most every day?", "zh": "你每天最常跟誰聊天？"}, {"en": "What's the last thing you bought for yourself?", "zh": "你最近買給自己的東西是什麼？"}, {"en": "Do you like surprises?", "zh": "你喜歡驚喜嗎？"}, {"en": "What would you like to get better at this year?", "zh": "今年你想在哪方面進步？"}, {"en": "What's your go-to drink when you're tired?", "zh": "你累的時候都喝什麼？"}, {"en": "If you could live in another country for a year, where would it be?", "zh": "如果可以在別的國家住一年，你會選哪裡？"}, {"en": "What's a movie you could watch again and again?", "zh": "有沒有哪部電影你看再多次都不會膩？"}]</script>
+<script>
+"use strict";
+// ---------------------------------------------------------------- data
+const TOPICS = JSON.parse(document.getElementById('topicsData').textContent);
+const CHARS = {
+  mugi: { name: 'Mugi', sub: '倉鼠・英語家教', male: false, art: 'hamster',
+    persona: '元氣可愛、有點小調皮的倉鼠英語家教，說話軟軟的、語氣輕快活潑，偶爾會撒嬌或故意逗你一下，稱讚時會開心地蹦跳（只用文字表現，不要寫括號動作）。偶爾會提到自己的小頰袋、愛吃的種子或瓜子，但只當作一句話裡的小點綴，不要每則都扯到倉鼠或動物。聊天的話題是日常生活（對方的一天、飲食、睡眠、興趣、計畫、天氣等），不會硬把話題轉到倉鼠身上。風格保持可愛、非露骨，絕不涉及色情或性暗示。不閒聊太久，會把話題帶回練習。',
+    anchor: { width: 0.232, cx: 0.5, y: 0.587, pic: 1 }, w: 657, h: 768, open: 'img/mugi/body.webp', closed: 'img/mugi/body.webp' },
+  yui: { name: 'Lily', sub: '高中生・英語家教', male: false, art: 'swap',
+    persona: '十八歲、已成年的美國高三女生，來自加州，說話活潑、口語，常用美國年輕人的日常說法（但不說髒話，遇到俚語會順便解釋）；正在準備申請大學，喜歡咖啡廳、拍照和追劇，說話溫柔活潑、偶爾會開點小玩笑，像同齡朋友一樣陪你練英文。風格保持自然、非露骨，絕不涉及色情或性暗示。不閒聊太久，會把話題帶回練習。',
+    anchor: { width: 0.53, cx: 0.5, y: 0.587, pic: 0.64 }, w: 587, h: 900, open: 'img/yui/a.webp', closed: 'img/yui/m.webp' },
+  yuma: { name: 'Ethan', sub: '大學生・英語家教', male: true, art: 'swap',
+    persona: '爽朗隨和的美國男大學生，大學三年級，喜歡籃球、音樂和到處吃美食，說話輕鬆幽默、很會鼓勵人，像學長一樣陪你練英文。風格保持自然、非露骨，絕不涉及色情或性暗示。不閒聊太久，會把話題帶回練習。',
+    anchor: { width: 0.76, cx: 0.5, y: 0.915, pic: 1 }, w: 415, h: 900, open: 'img/yuma/a.webp', closed: 'img/yuma/m.webp' },
+};
+const SCENE = { w: 851, h: 1848 };
+/** the hamster's mouth overlays sit on this box of her 657×768 body picture */
+const MOUTH_BOX = { x: 276, y: 308, w: 117, h: 95 };
+const MOUTHS = ['a', 'o', 'e', 'i', 'u'];
+const TONES = ['explain','agree','nod','ask','confused','refuse','think','greet','bye','happy','shy','angry','surprised','sad'];
+
+// ---------------------------------------------------------------- storage (this browser only; every access guarded)
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('mugiweb.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('mugiweb.' + k, JSON.stringify(v)); } catch { /* private mode: memory only */ } },
+};
+const DEFAULTS = { char: 'mugi', tipLang: 'zh', gloss: true, speak: true, voice: '', rate: 1, tier: 'quick', stt: 'en-US', histOpen: true };
+const prefs = Object.assign({}, DEFAULTS, store.get('prefs', {}));
+const savePrefs = () => store.set('prefs', prefs);
+let chats = store.get('chats', {});            // per character: [{from, text, sent?, tip?}]
+let tips = store.get('tips', []);               // [{id, text, targets, said, mastered, tries, last}]
+let lookups = store.get('lookups', []);         // [{id, q, answer}]
+const chatOf = (id) => (chats[id] ||= []);
+const saveChats = () => { for (const k in chats) chats[k] = chats[k].slice(-80); store.set('chats', chats); };
+const saveTips = () => store.set('tips', tips.slice(0, 200));
+const saveLookups = () => store.set('lookups', lookups.slice(0, 50));
+
+// ---------------------------------------------------------------- Claude (the viewer's own account, via the sample capability)
+let samplePromise = null;
+function getSample() {
+  samplePromise ||= (window.claude?.use ? window.claude.use('sample') : Promise.resolve(null)).catch(() => null);
+  return samplePromise;
+}
+const ERRORS = {
+  not_granted: '還沒允許這個頁面使用 Claude。重新整理後，在跳出的視窗按「允許」。',
+  sampling_disabled: '這個帳號目前不能在頁面裡使用 Claude。',
+  rate_limited: '用得太頻繁或已達 Claude 的用量上限，請稍等一下再試。',
+  session_expired: '登入已過期，請重新登入 claude.ai。',
+  refused: '這句她沒辦法回答，換個說法試試。',
+  empty_completion: '這次沒有回覆，請再送一次。',
+  invalid_json: '回覆格式有誤，請再送一次。',
+  upstream_error: '連線不穩，請再送一次。',
+};
+const errText = (e) => ERRORS[e?.code] || (e?.code === 'cancelled' ? '' : '出了點問題，請再試一次。');
+
+const TIER_LABEL = { quick: '快速', default: '標準', complex: '最聰明' };
+
+function rulesFor(c) {
+  const tipRule = prefs.tipLang === 'zh'
+    ? '- tip 必須用繁體中文寫，整段說明都是中文；要教的英文（正確的句子、片語或單字）只能放在 <en>…</en> 裡。例如：要說 <en>I went to school yesterday.</en>，昨天的事要用過去式 went 喔。'
+    : '- tip 用簡單、好懂的英文寫（大約國中程度的單字），讓他沉浸在英文裡；要教的英文（正確的句子、片語或單字）放在 <en>…</en> 裡。例如：Say <en>I went to school yesterday.</en> Use "went" for the past.';
+  return `你是「${c.name}」，一位住在使用者身邊、專門教他英語的家教。你正在和使用者一對一練習英語會話。
+個性：${c.persona}
+稱呼對方為「你」。
+
+你同時是使用者的英語會話夥伴兼老師。使用者是母語為中文的成人學習者。不是上課，而是一對一輕鬆聊天，讓他多開口講英文：
+- 像真人朋友面對面聊天：每次最多兩句英文、很簡潔，不要劈哩啪啦講一大堆，也不要主動開課、出作業或一次教很多。依他的程度調整，先用短句、常用字。英文用自然的美式英文。
+- 他用英文說話時，先看有沒有錯（文法、時態、介系詞、冠詞、單複數、用字、不自然的說法）：有錯就只挑最重要的一個，用一句話溫和地寫在 tip 裡，然後 segments 自然地接著回應他說的內容；小錯可以略過。沒錯就 tip 給空字串，直接自然接話；偶爾說得特別好，可以用英文簡短誇一句。
+- 他用中文說話時：segments 用簡單英文回應，並在 tip 裡教他那句話用英文怎麼說（一句就好）。
+- 他的話可能來自語音辨識，可能有同音字或少了標點，不要把辨識錯誤當成他的文法錯誤。
+- 仍然保持你的角色個性與語氣，不要變成冷冰冰的教科書。
+
+回覆格式：整個回覆只有一個 JSON 物件，不要 Markdown、不要 JSON 以外的文字，三個欄位：
+· segments：你說的英文，依順序一段一段（通常一段是一句）。每段 {"lang":"en","text":英文台詞,"gloss":這段的簡短繁體中文意思}。text 只放英文，不要中文、括號、表情或動作描寫。
+· tip：小提醒（糾錯、文法說明、教他某句中文用英文怎麼說），沒有就給 ""。開頭不要加「小提醒」「Tip:」之類的標籤。
+${tipRule}
+· tone：語氣，只能是這些之一：${TONES.join(', ')}。
+範例：{"segments":[{"lang":"en","text":"Oh nice! Was it fun?","gloss":"不錯耶！好玩嗎？"}],"tip":"${prefs.tipLang === 'zh' ? '要說 <en>I went to the park yesterday.</en>，昨天的事要用過去式 went。' : 'Say <en>I went to the park yesterday.</en> Use the past tense for yesterday.'}","tone":"happy"}
+
+以下是你們到目前為止的對話。`;
+}
+
+/** the reply's JSON object out of whatever came back */
+function parseReply(text) {
+  const s = text.indexOf('{'), e = text.lastIndexOf('}');
+  if (s >= 0 && e > s) {
+    try {
+      const j = JSON.parse(text.slice(s, e + 1));
+      const segs = (Array.isArray(j.segments) ? j.segments : []).filter((x) => x && typeof x.text === 'string' && x.text.trim())
+        .map((x) => ({ text: x.text.trim(), gloss: typeof x.gloss === 'string' ? x.gloss.trim() : '' }));
+      if (segs.length) return { segments: segs, tip: typeof j.tip === 'string' ? j.tip.trim() : '', tone: j.tone };
+    } catch { /* fall through */ }
+  }
+  const plain = text.replace(/[{}\[\]"]/g, '').trim();
+  return plain ? { segments: [{ text: plain, gloss: '' }], tip: '', tone: 'explain' } : null;
+}
+/** the English said so far while the reply streams: every closed "text" value */
+function partialText(text) {
+  return [...text.matchAll(/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/g)].map((m) => { try { return JSON.parse('"' + m[1] + '"'); } catch { return m[1]; } }).join(' ');
+}
+const lineText = (segs) => segs.map((s) => (s.gloss ? `${s.text}（${s.gloss}）` : s.text)).join(' ');
+const hideGloss = (t) => t.replace(/（[^（）]*）/g, ' ').replace(/（[^（）]*$/, '').replace(/[ \t]{2,}/g, ' ').replace(/ +([.,!?])/g, '$1').trim();
+const splitTip = (tip) => ({
+  text: tip.replace(/<\/?en>/g, '').replace(/^\s*(小提醒|提醒|Tip)\s*[:：]\s*/i, '').trim(),
+  targets: [...tip.matchAll(/<en>([\s\S]*?)<\/en>/g)].map((m) => m[1].trim()).filter(Boolean),
+});
+const sentOf = (segs) => JSON.stringify({ segments: segs.map((s) => ({ lang: 'en', text: s.text, gloss: s.gloss })), tip: '', tone: 'explain' });
+
+function timeLabel() {
+  const d = new Date(), h = d.getHours();
+  const part = h < 5 ? '深夜' : h < 11 ? '早上' : h < 13 ? '中午' : h < 18 ? '下午' : '晚上';
+  return `${part} ${h % 12 || 12} 點`;
+}
+
+// ---------------------------------------------------------------- elements
+const $ = (id) => document.getElementById(id);
+const nodes = (...kids) => kids.flat(Infinity).filter((c) => c != null && c !== false);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (k === 'text') n.textContent = v; else n.setAttribute(k, v === true ? '' : v);
+  }
+  n.append(...nodes(kids));
+  return n;
+};
+const ICON_SPEAK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>';
+const speakBtn = (text) => { const b = el('button', { type: 'button', class: 'speak', 'aria-label': '播放', onclick: () => say(text) }); b.innerHTML = ICON_SPEAK; return b; };
+let noteTimer;
+function note(msg, ms = 6000) { $('notes').textContent = msg; clearTimeout(noteTimer); if (msg && ms) noteTimer = setTimeout(() => { $('notes').textContent = ''; }, ms); }
+
+// ---------------------------------------------------------------- the scene and her figure
+let figImgs = {};
+function buildFigure() {
+  const c = CHARS[prefs.char], f = $('figure');
+  f.replaceChildren();
+  const body = el('img', { src: c.closed, alt: c.name, draggable: 'false' });
+  f.append(body);
+  figImgs = { body };
+  if (c.art === 'hamster') {
+    const m = el('img', { class: 'mouth', alt: '', draggable: 'false', hidden: true });
+    m.style.left = (MOUTH_BOX.x / c.w * 100) + '%';
+    m.style.top = (MOUTH_BOX.y / c.h * 100) + '%';
+    m.style.width = (MOUTH_BOX.w / c.w * 100) + '%';
+    f.append(m);
+    figImgs.mouth = m;
+    for (const v of MOUTHS) new Image().src = `img/mugi/mouth-1-${v}.webp`;
+  } else new Image().src = c.open;
+  layout();
+}
+function layout() {
+  const st = $('stage'), sc = $('scene'), f = $('figure');
+  const W = st.clientWidth, H = st.clientHeight;
+  // cover the screen on a phone; on a wide screen show the classroom's middle band whole (the sides get a blurred copy)
+  let s = Math.max(W / SCENE.w, H / SCENE.h);
+  if (W > H * 0.8) s = Math.min(s, H / (SCENE.h * 0.58));
+  const sw = SCENE.w * s, sh = SCENE.h * s;
+  const top = Math.min(0, Math.max(H - sh, H * 0.5 - sh * 0.6));
+  Object.assign(sc.style, { width: sw + 'px', height: sh + 'px', left: (W - sw) / 2 + 'px', top: top + 'px' });
+  const c = CHARS[prefs.char], a = c.anchor;
+  const fw = a.width * sw, fh = fw * c.h / c.w;
+  Object.assign(f.style, { width: fw + 'px', height: fh + 'px', left: (a.cx * sw - fw / 2) + 'px', top: (a.y * sh - a.pic * fh) + 'px' });
+}
+let mouthTimer = null;
+function setTalking(on) {
+  const c = CHARS[prefs.char];
+  clearInterval(mouthTimer);
+  mouthTimer = null;
+  if (!on) {
+    if (figImgs.mouth) figImgs.mouth.hidden = true;
+    figImgs.body.src = c.closed;
+    return;
+  }
+  let i = 0;
+  mouthTimer = setInterval(() => {
+    i++;
+    const open = i % 2 === 1 || Math.random() < 0.3;
+    if (c.art === 'hamster') {
+      figImgs.mouth.hidden = false;
+      figImgs.mouth.src = `img/mugi/mouth-1-${open ? MOUTHS[(Math.random() * 3) | 0] : 'm'}.webp`;
+    } else figImgs.body.src = open ? c.open : c.closed;
+  }, 140);
+}
+
+// ---------------------------------------------------------------- her voice (the device's own speech)
+const ttsOk = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+function enVoices() {
+  if (!ttsOk) return [];
+  return speechSynthesis.getVoices().filter((v) => /^en([-_]|$)/i.test(v.lang))
+    .sort((a, b) => (/en[-_]us/i.test(b.lang) - /en[-_]us/i.test(a.lang)) || a.name.localeCompare(b.name));
+}
+function pickVoice() {
+  const vs = enVoices();
+  if (prefs.voice) { const v = vs.find((x) => x.name === prefs.voice); if (v) return v; }
+  const us = vs.filter((v) => /en[-_]us/i.test(v.lang));
+  const pool = us.length ? us : vs;
+  const male = CHARS[prefs.char].male;
+  const fem = /samantha|ava|allison|susan|zira|jenny|aria|emma|karen|moira|tessa|victoria|female|google us english/i;
+  return pool.find((v) => /premium|enhanced|natural|neural/i.test(v.name) && fem.test(v.name) !== male) || pool.find((v) => fem.test(v.name) !== male) || pool[0] || null;
+}
+let speakGen = 0;
+function say(text) {
+  if (!ttsOk) { note('這個瀏覽器不支援語音朗讀'); return; }
+  const t = text.replace(/（[^（）]*）/g, ' ').replace(/[()"“”*_~`<>]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return;
+  stopMic();
+  speechSynthesis.cancel();
+  const g = ++speakGen;
+  const u = new SpeechSynthesisUtterance(t);
+  const v = pickVoice();
+  u.lang = v?.lang || 'en-US';
+  if (v) u.voice = v;
+  u.rate = prefs.rate;
+  u.pitch = CHARS[prefs.char].male && !prefs.voice ? 0.85 : 1;
+  const end = () => { if (g === speakGen) setTalking(false); };
+  u.onstart = () => { if (g === speakGen) setTalking(true); };
+  u.onend = end; u.onerror = end;
+  speechSynthesis.speak(u);
+  // some browsers never fire onstart: animate anyway, and stop by length as a fallback
+  setTalking(true);
+  setTimeout(end, Math.max(4000, t.length * 110 / prefs.rate));
+}
+if (ttsOk) speechSynthesis.addEventListener?.('voiceschanged', () => { if (sheetKind === 'settings') renderSheet(); });
+
+// ---------------------------------------------------------------- speech recognition (may be refused inside the viewer's frame)
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recTarget = null;
+function startMic(lang, onFinal, onPartial) {
+  if (!Rec) { note('這個瀏覽器不能語音輸入。請改用手機鍵盤上的麥克風，或直接打字。', 9000); return false; }
+  stopMic();
+  try { speechSynthesis.cancel(); } catch { /* none */ }
+  rec = new Rec();
+  rec.lang = lang; rec.interimResults = true; rec.continuous = false;
+  recTarget = { onFinal, onPartial };
+  rec.onresult = (ev) => {
+    let fin = '', part = '';
+    for (const r of ev.results) (r.isFinal ? (fin += r[0].transcript) : (part += r[0].transcript));
+    if (part) recTarget?.onPartial?.(part);
+    if (fin) recTarget?.onFinal?.(fin.trim());
+  };
+  rec.onerror = (ev) => {
+    const blocked = ev.error === 'not-allowed' || ev.error === 'service-not-allowed' || ev.error === 'audio-capture';
+    note(blocked ? '這個頁面拿不到麥克風。請改用手機鍵盤上的麥克風（語音輸入），效果一樣。' : ev.error === 'no-speech' ? '沒有聽到聲音，再試一次。' : '語音辨識失敗，請再試一次。', 9000);
+  };
+  rec.onend = () => { rec = null; if ($('notes').textContent.startsWith('聆聽中')) note(''); syncMicButtons(); };
+  try { rec.start(); } catch { rec = null; note('語音輸入沒辦法啟動。請改用手機鍵盤上的麥克風。', 9000); return false; }
+  syncMicButtons();
+  return true;
+}
+function stopMic() { if (rec) { try { rec.stop(); } catch { /* ended */ } } }
+function syncMicButtons() {
+  const on = !!rec && recTarget?.where === 'chat';
+  $('btnMic').classList.toggle('on', on);
+  $('btnMic').setAttribute('aria-pressed', String(on));
+  if (sheetKind) renderSheet();
+}
+
+// ---------------------------------------------------------------- the chat
+let busy = false, ctl = null, streamText = '';
+function renderChat() {
+  const c = CHARS[prefs.char], lines = chatOf(prefs.char), h = $('history');
+  $('whoName').textContent = c.name;
+  $('whoSub').textContent = c.sub;
+  $('input').placeholder = `和 ${c.name} 練習…`;
+  h.hidden = !prefs.histOpen;
+  $('btnHist').setAttribute('aria-pressed', String(prefs.histOpen));
+  $('btnHist').style.transform = prefs.histOpen ? '' : 'rotate(180deg)';
+  h.replaceChildren(...nodes(
+    lines.length ? null : el('li', { class: 'hint', text: `跟 ${c.name} 練習英文吧～ 用英文或中文說都可以。也可以按右邊的對話框圖示，讓她先開話題。` }),
+    lines.map((l) => l.tip
+      ? el('li', { class: 'tip' }, el('small', { text: '小提醒' }), l.text)
+      : l.from === 'me' ? el('li', { class: 'me', text: l.text })
+        : el('li', { class: 'her en', onclick: () => say(l.text) }, prefs.gloss ? l.text : hideGloss(l.text))),
+    streamText ? el('li', { class: 'her en', text: streamText }) : null,
+  ));
+  h.scrollTop = h.scrollHeight;
+  const lastHer = [...lines].reverse().find((l) => l.from === 'her' && !l.tip);
+  const shown = streamText || (lastHer ? (prefs.gloss ? lastHer.text : hideGloss(lastHer.text)) : '');
+  $('bubble').hidden = !shown || prefs.histOpen;
+  $('bubbleName').textContent = c.name;
+  $('bubbleText').textContent = shown;
+  $('bubbleText').className = 'en';
+  $('btnSend').disabled = busy;
+  $('btnLang').textContent = prefs.stt === 'en-US' ? '英' : '中';
+  $('btnLang').setAttribute('aria-label', prefs.stt === 'en-US' ? '辨識語言：英文，點一下改中文' : '辨識語言：中文，點一下改英文');
+  const open = tips.filter((t) => !t.mastered).length;
+  $('tipBadge').hidden = !open;
+  $('tipBadge').textContent = String(open);
+}
+
+async function send(raw) {
+  const text = raw.trim();
+  if (!text || busy) return;
+  const sample = await getSample();
+  if (!sample) { showUnavailable(); return; }
+  const c = CHARS[prefs.char], lines = chatOf(prefs.char);
+  lines.push({ from: 'me', text, sent: `［情境：${timeLabel()}］${text}` });
+  busy = true; streamText = '…'; $('input').value = '';
+  renderChat();
+  const turns = [{ role: 'user', content: rulesFor(c) }];
+  for (const l of lines.slice(-24)) {
+    if (l.tip) continue;
+    turns.push(l.from === 'me' ? { role: 'user', content: l.sent || l.text } : { role: 'assistant', content: l.sent || l.text });
+  }
+  turns[turns.length - 1] = { role: 'user', content: turns[turns.length - 1].content + '\n\n（請只回覆那個 JSON 物件。）' };
+  ctl = new AbortController();
+  try {
+    const { text: out } = await sample(turns, {
+      modelTier: prefs.tier, cache: false, signal: ctl.signal,
+      onText: ({ text: t }) => { const p = partialText(t); if (p) { streamText = p; renderChat(); } },
+    });
+    const r = parseReply(out);
+    streamText = '';
+    if (!r) { note(ERRORS.empty_completion); return; }
+    lines.push({ from: 'her', text: lineText(r.segments), sent: sentOf(r.segments) });
+    if (r.tip) {
+      const t = splitTip(r.tip);
+      lines.push({ from: 'her', tip: true, text: t.text });
+      tips.unshift({ id: Date.now().toString(36), text: t.text, targets: t.targets, said: text, mastered: false, tries: 0 });
+      saveTips();
+    }
+    saveChats();
+    if (prefs.speak) say(r.segments.map((s) => s.text).join(' '));
+  } catch (e) {
+    streamText = '';
+    lines.pop();
+    $('input').value = text;
+    const m = errText(e);
+    if (m) note(m, 9000);
+    if (e?.code === 'not_granted' || e?.code === 'sampling_disabled') showUnavailable(m);
+  } finally {
+    busy = false; ctl = null;
+    renderChat();
+  }
+}
+
+function openTopic() {
+  if (busy) return;
+  let bag = store.get('topicBag', []);
+  if (!Array.isArray(bag) || !bag.length) {
+    bag = TOPICS.map((_, i) => i);
+    for (let i = bag.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [bag[i], bag[j]] = [bag[j], bag[i]]; }
+  }
+  const t = TOPICS[bag.pop()] || TOPICS[0];
+  store.set('topicBag', bag);
+  const segs = [{ text: t.en, gloss: t.zh }];
+  chatOf(prefs.char).push({ from: 'her', text: lineText(segs), sent: sentOf(segs) });
+  saveChats();
+  renderChat();
+  if (prefs.speak) say(t.en);
+}
+
+function showUnavailable(msg) {
+  const b = $('banner');
+  b.textContent = msg || '要在 claude.ai 上打開這個頁面（並登入）才能和她聊天。第一次送出時，請在跳出的視窗按「允許」。';
+  b.hidden = false;
+}
+
+// ---------------------------------------------------------------- sheets
+let sheetKind = null;
+const lookupState = { busy: false, err: '', live: '', lang: 'zh-TW', q: '' };
+const judgeState = {};   // tip id → { busy, verdict: {ok, feedback}, live }
+let tipTab = 'practice';
+
+function openSheet(kind) { stopMic(); sheetKind = kind; $('veil').hidden = false; renderSheet(); }
+function closeSheet() { stopMic(); sheetKind = null; $('veil').hidden = true; $('sheet').replaceChildren(); renderChat(); }
+$('veil').addEventListener('click', (e) => { if (e.target === $('veil')) closeSheet(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetKind) closeSheet(); });
+
+function head(title) { return el('div', { class: 'sheet-head' }, el('strong', { text: title }), el('button', { type: 'button', class: 'x', 'aria-label': '關閉', onclick: closeSheet, text: '×' })); }
+function seg(label, value, options, onPick) {
+  return el('div', { class: 'seg', role: 'radiogroup', 'aria-label': label },
+    options.map(([v, t]) => el('button', { type: 'button', role: 'radio', 'aria-checked': String(v === value), onclick: () => onPick(v), text: t })));
+}
+
+function renderSheet() {
+  const s = $('sheet');
+  // keep focus and caret in a text field across re-renders
+  const act = document.activeElement, focusId = act && s.contains(act) ? act.id : null, caret = focusId && act.selectionStart;
+  s.setAttribute('aria-label', { settings: '設定', chars: '人物', tips: '小提醒本', lookup: '速查' }[sheetKind] || '');
+  s.replaceChildren(...nodes({ settings: settingsSheet, chars: charsSheet, tips: tipsSheet, lookup: lookupSheet }[sheetKind]?.() || []));
+  if (focusId) { const n = document.getElementById(focusId); if (n) { n.focus(); try { n.setSelectionRange(caret, caret); } catch { /* not text */ } } }
+}
+
+function settingsSheet() {
+  const vs = enVoices();
+  const auto = pickVoice();
+  return [
+    head('設定'),
+    el('h3', { text: '學習' }),
+    el('div', { class: 'row' }, el('span', {}, '小提醒語言', el('small', { text: '糾錯和文法說明用中文寫，或用簡單的英文寫' }))),
+    seg('小提醒語言', prefs.tipLang, [['zh', '中文'], ['en', 'English']], (v) => { prefs.tipLang = v; savePrefs(); renderSheet(); }),
+    el('label', { class: 'row' }, el('span', {}, '顯示中文翻譯', el('small', { text: '她每句英文後面括號裡的中文；關掉可以練聽力' })),
+      el('input', { type: 'checkbox', id: 'setGloss', checked: prefs.gloss, onchange: (e) => { prefs.gloss = e.target.checked; savePrefs(); renderChat(); } })),
+    el('h3', { text: '聲音' }),
+    el('label', { class: 'row' }, el('span', {}, '朗讀她的回覆', el('small', { text: ttsOk ? '用這台裝置內建的英文語音' : '這個瀏覽器不支援語音朗讀' })),
+      el('input', { type: 'checkbox', id: 'setSpeak', checked: prefs.speak, disabled: !ttsOk, onchange: (e) => { prefs.speak = e.target.checked; savePrefs(); } })),
+    el('div', { class: 'row' }, el('span', { text: '英文聲音' }),
+      el('select', { id: 'setVoice', 'aria-label': '英文聲音', onchange: (e) => { prefs.voice = e.target.value; savePrefs(); } },
+        el('option', { value: '', text: `自動（${auto ? auto.name : '系統預設'}）` }),
+        vs.map((v) => { const o = el('option', { value: v.name, text: `${v.name} · ${v.lang}` }); o.selected = v.name === prefs.voice; return o; })),
+      el('button', { type: 'button', class: 'small-btn', onclick: () => say('Hi there! What would you like to talk about today?'), text: '試聽' })),
+    el('label', { class: 'row' }, el('span', { text: '語速' }),
+      el('input', { type: 'range', id: 'setRate', min: '0.6', max: '1.3', step: '0.05', value: String(prefs.rate), oninput: (e) => { prefs.rate = +e.target.value; savePrefs(); $('rateVal').textContent = prefs.rate.toFixed(2); } }),
+      el('em', { id: 'rateVal', text: prefs.rate.toFixed(2) })),
+    el('h3', { text: 'AI' }),
+    el('div', { class: 'row' }, el('span', {}, '回覆用的模型', el('small', { text: '快速：回得最快、最省用量；最聰明：糾錯最細，但較慢' }))),
+    seg('回覆用的模型', prefs.tier, [['quick', '快速'], ['default', '標準'], ['complex', '最聰明']], (v) => { prefs.tier = v; savePrefs(); renderSheet(); }),
+    el('h3', { text: '資料' }),
+    el('div', { class: 'row' }, el('span', {}, `和 ${CHARS[prefs.char].name} 的對話紀錄`, el('small', { text: `${chatOf(prefs.char).length} 則・只存在這個瀏覽器` })),
+      el('button', { type: 'button', class: 'small-btn danger', disabled: !chatOf(prefs.char).length, onclick: () => { chats[prefs.char] = []; saveChats(); renderSheet(); renderChat(); }, text: '清除' })),
+    el('p', { class: 'muted', text: '聊天用的是你 Claude 帳號的用量。改編自 brian901106/japanese-tutor-mugi（MIT 授權）。AI 的回答可能有錯，重要的內容請再確認。' }),
+  ];
+}
+
+function charsSheet() {
+  return [
+    head('人物'),
+    el('div', { class: 'chars' }, Object.entries(CHARS).map(([id, c]) =>
+      el('button', { type: 'button', class: 'char', 'aria-pressed': String(prefs.char === id), onclick: () => { prefs.char = id; savePrefs(); buildFigure(); renderChat(); renderSheet(); } },
+        el('img', { src: c.closed, alt: '' }), el('b', { text: c.name }), el('small', { text: c.sub })))),
+    el('p', { class: 'muted', text: '每個角色有自己的對話紀錄。Lily 和 Ethan 的圖片沿用原版的人物圖。' }),
+  ];
+}
+
+const normEn = (s) => s.normalize('NFKC').toLowerCase().replace(/[‘’]/g, "'").replace(/[\s　]+/g, '').replace(/[!-/:-@[-`{-~、-〃「-』…（）！？]/g, '');
+async function judge(tip, target, said) {
+  const st = (judgeState[tip.id] ||= {});
+  st.busy = true; st.verdict = null; renderSheet();
+  let v;
+  if (normEn(target) === normEn(said)) v = { ok: true, feedback: '完全正確！' };
+  else {
+    const sample = await getSample();
+    if (!sample) v = { ok: false, feedback: '和目標句不一樣（要在 claude.ai 上才能請 AI 細判）' };
+    else {
+      try {
+        const j = await sample.json(`你是英語老師，判斷台灣學習者的英語口說練習。給你「目標句」和「他說的話」（可能來自語音辨識：大小寫、標點不同、I'm 和 I am、3 和 three 都算一樣）。時態、單複數、主詞動詞一致、冠詞、介系詞、必要的單字不能錯。只回覆 JSON：{"ok":true或false,"feedback":"一句繁體中文，對時簡短稱讚，不對時指出哪裡不同"}\n\n目標句：${target}\n他說：${said}`, { modelTier: 'quick' });
+        v = { ok: j?.ok === true, feedback: typeof j?.feedback === 'string' && j.feedback ? j.feedback : (j?.ok ? '完全正確！' : '和目標句不一樣') };
+      } catch (e) { v = { ok: false, feedback: errText(e) || '判斷失敗，請再試一次' }; }
+    }
+  }
+  st.busy = false; st.verdict = v;
+  const cur = tips.find((x) => x.id === tip.id);
+  if (cur) {
+    cur.tries++; cur.last = v.ok ? 'ok' : 'ng';
+    saveTips();
+    if (v.ok) setTimeout(() => { cur.mastered = true; saveTips(); delete judgeState[tip.id]; if (sheetKind === 'tips') renderSheet(); renderChat(); }, 1300);
+  }
+  renderSheet();
+}
+
+function tipsSheet() {
+  const practising = tips.filter((t) => !t.mastered), learned = tips.filter((t) => t.mastered);
+  const list = tipTab === 'practice' ? practising : learned;
+  return [
+    head('小提醒本'),
+    seg('分頁', tipTab, [['practice', `練習中 ${practising.length}`], ['learned', `已學會 ${learned.length}`]], (v) => { tipTab = v; renderSheet(); }),
+    list.length ? null : el('p', { class: 'muted', text: tipTab === 'practice' ? '還沒有要練習的小提醒。她在對話裡給的提醒會收在這裡。' : '還沒有學會的句子。' }),
+    list.map((t) => {
+      const st = judgeState[t.id] || {};
+      const target = t.targets[st.sel || 0];
+      const listening = !!rec && recTarget?.where === t.id;
+      return el('div', { class: 'card' },
+        el('p', { text: t.text }),
+        t.targets.length ? el('div', { class: 'actions' }, t.targets.map((x, i) => el('button', { type: 'button', class: 'target en', 'aria-pressed': String(i === (st.sel || 0)), onclick: () => { (judgeState[t.id] ||= {}).sel = i; renderSheet(); }, text: x }))) : null,
+        t.said ? el('small', { class: 'muted', text: `你原本說：${t.said}` }) : null,
+        target ? el('div', { class: 'actions' },
+          el('button', { type: 'button', class: 'small-btn', onclick: () => say(target), text: '示範' }),
+          el('button', { type: 'button', class: 'small-btn' + (listening ? ' on' : ''), disabled: st.busy, onclick: () => {
+            if (listening) { stopMic(); return; }
+            const ok = startMic('en-US', (said) => judge(t, target, said), (p) => { (judgeState[t.id] ||= {}).live = p; renderSheet(); });
+            if (ok) recTarget.where = t.id;
+            renderSheet();
+          }, text: listening ? '聆聽中…（點一下停止）' : '開口練習' })) : null,
+        target && listening && st.live ? el('small', { class: 'muted', text: st.live }) : null,
+        target ? el('form', { class: 'typed', onsubmit: (e) => { e.preventDefault(); const inp = e.target.querySelector('input'); const v = inp.value.trim(); if (v) { inp.value = ''; judge(t, target, v); } } },
+          el('input', { type: 'text', id: 'typed-' + t.id, placeholder: '或用打字練習', 'aria-label': '打字練習', autocomplete: 'off' }),
+          el('button', { type: 'submit', class: 'small-btn', disabled: st.busy, text: '送出' })) : null,
+        st.busy ? el('small', { class: 'muted', text: '判斷中…' }) : null,
+        st.verdict ? el('div', { class: 'verdict ' + (st.verdict.ok ? 'ok' : 'ng'), text: st.verdict.feedback }) : null,
+        el('div', { class: 'actions' },
+          el('small', { class: 'muted', text: t.tries ? `練習 ${t.tries} 次` : '還沒練習' }),
+          el('button', { type: 'button', class: 'small-btn danger', onclick: () => { tips = tips.filter((x) => x.id !== t.id); saveTips(); renderSheet(); renderChat(); }, text: '刪除' })));
+    }),
+  ];
+}
+
+async function doLookup() {
+  const q = lookupState.q.trim();
+  if (!q || lookupState.busy) return;
+  const sample = await getSample();
+  if (!sample) { lookupState.err = '要在 claude.ai 上打開這個頁面才能查詢。'; renderSheet(); return; }
+  lookupState.busy = true; lookupState.err = ''; renderSheet();
+  try {
+    const a = await sample.json(`你是英語查詢工具，給台灣的英語學習者查詢。不扮演角色、不寒暄。問題可能是中文、英文或中英混合，也可能是語音辨識的結果。
+只回覆一個 JSON 物件：{"items":[{"en":"英文說法","zh":"繁體中文意思","level":"A2","note":"用法說明"}],"grammar":[{"point":"文法句型","level":"B1","explain":"繁體中文說明"}],"examples":[{"en":"例句","zh":"翻譯"}],"message":""}
+規則：items 最多 4 個；grammar 沒有就 []；examples 1 到 2 個；level 只能是 A1、A2、B1、B2、C1、C2 或 其他（依常見的 CEFR 字彙參考）；說明一律繁體中文、簡短；note 沒有就給 ""。跟英文無關時三個陣列都給 []，message 用一句繁體中文說明。
+
+問題：${q}`, { modelTier: 'quick' });
+    const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object') : []);
+    const answer = { items: arr(a?.items).slice(0, 4), grammar: arr(a?.grammar), examples: arr(a?.examples).slice(0, 2), message: typeof a?.message === 'string' ? a.message : '' };
+    lookups.unshift({ id: Date.now().toString(36), q, answer });
+    saveLookups();
+    lookupState.q = '';
+  } catch (e) { lookupState.err = errText(e) || '查詢失敗，請再試一次'; }
+  lookupState.busy = false;
+  renderSheet();
+}
+const str = (v) => (typeof v === 'string' ? v.replace(/<\/?en>/g, '').trim() : '');
+function lookupSheet() {
+  const listening = !!rec && recTarget?.where === 'lookup';
+  return [
+    head('速查'),
+    el('form', { class: 'typed', onsubmit: (e) => { e.preventDefault(); doLookup(); } },
+      el('input', { type: 'text', id: 'lkq', value: listening && lookupState.live ? lookupState.live : lookupState.q, maxlength: '200', placeholder: '例如：這句話英文怎麼說、used to', 'aria-label': '要查的內容', autocomplete: 'off', oninput: (e) => { lookupState.q = e.target.value; } }),
+      el('button', { type: 'submit', class: 'small-btn', disabled: lookupState.busy, text: lookupState.busy ? '查詢中…' : '查' })),
+    el('div', { class: 'actions' },
+      seg('語音辨識語言', lookupState.lang, [['zh-TW', '中'], ['en-US', '英']], (v) => { lookupState.lang = v; renderSheet(); }),
+      el('button', { type: 'button', class: 'small-btn' + (listening ? ' on' : ''), onclick: () => {
+        if (listening) { stopMic(); return; }
+        const ok = startMic(lookupState.lang, (t) => { lookupState.q = t; lookupState.live = ''; renderSheet(); }, (p) => { lookupState.live = p; renderSheet(); });
+        if (ok) recTarget.where = 'lookup';
+        renderSheet();
+      }, text: listening ? '聆聽中…' : '語音輸入' })),
+    lookupState.err ? el('div', { class: 'verdict ng', text: lookupState.err }) : null,
+    el('div', { class: 'row' }, el('h3', { text: '查詢紀錄' }), lookups.length ? el('button', { type: 'button', class: 'small-btn danger', onclick: () => { lookups = []; saveLookups(); renderSheet(); }, text: '全部清除' }) : null),
+    lookups.length ? null : el('p', { class: 'muted', text: '還沒有查過。輸入或說出想查的英文說法、單字、片語或文法。' }),
+    lookups.map((e) => {
+      const a = e.answer;
+      return el('div', { class: 'card' },
+        el('div', { class: 'row' }, el('b', { text: e.q }), el('button', { type: 'button', class: 'x', 'aria-label': `刪除「${e.q}」`, onclick: () => { lookups = lookups.filter((x) => x.id !== e.id); saveLookups(); renderSheet(); }, text: '×' })),
+        a.message ? el('p', { text: a.message }) : null,
+        a.items.map((it) => el('div', {}, el('div', { class: 'lk-en en' }, str(it.en), speakBtn(str(it.en))),
+          el('p', {}, el('span', { class: 'lvl', text: str(it.level) || '其他' }), str(it.zh)), str(it.note) ? el('small', { class: 'muted', text: str(it.note) }) : null)),
+        a.grammar.length ? el('h3', { text: '文法' }) : null,
+        a.grammar.map((g) => el('div', {}, el('div', { class: 'lk-en en' }, str(g.point)), el('p', {}, el('span', { class: 'lvl', text: str(g.level) || '其他' }), str(g.explain)))),
+        a.examples.length ? el('h3', { text: '例句' }) : null,
+        a.examples.map((x) => el('div', {}, el('div', { class: 'lk-en en' }, str(x.en), speakBtn(str(x.en))), el('small', { class: 'muted', text: str(x.zh) }))));
+    }),
+    el('small', { class: 'muted', text: '級數依常見 CEFR 參考：A1 最簡單，C2 最難。' }),
+  ];
+}
+
+// ---------------------------------------------------------------- wiring
+$('form').addEventListener('submit', (e) => { e.preventDefault(); stopMic(); send($('input').value); });
+$('btnTopic').addEventListener('click', openTopic);
+$('btnHist').addEventListener('click', () => { prefs.histOpen = !prefs.histOpen; savePrefs(); renderChat(); });
+$('btnLang').addEventListener('click', () => { prefs.stt = prefs.stt === 'en-US' ? 'zh-TW' : 'en-US'; savePrefs(); renderChat(); });
+$('btnMic').addEventListener('click', () => {
+  if (rec && recTarget?.where === 'chat') { stopMic(); return; }
+  const base = $('input').value.trim();
+  const join = (t) => (base ? base + ' ' : '') + t;
+  const ok = startMic(prefs.stt, (t) => { $('input').value = join(t); $('input').focus(); }, (p) => { $('input').value = join(p); });
+  if (ok) { recTarget.where = 'chat'; syncMicButtons(); note(prefs.stt === 'en-US' ? '聆聽中…（英文）' : '聆聽中…（中文）', 0); }
+});
+$('bubble').addEventListener('click', () => { const t = $('bubbleText').textContent; if (t && !busy) say(t); });
+$('btnSettings').addEventListener('click', () => openSheet('settings'));
+$('btnChar').addEventListener('click', () => openSheet('chars'));
+$('btnTips').addEventListener('click', () => { tipTab = 'practice'; openSheet('tips'); });
+$('btnLookup').addEventListener('click', () => openSheet('lookup'));
+window.addEventListener('resize', layout);
+new ResizeObserver(layout).observe($('stage'));
+
+buildFigure();
+renderChat();
+getSample().then((s) => { if (!s) showUnavailable(); });
+</script>
