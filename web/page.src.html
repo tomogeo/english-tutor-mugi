@@ -43,8 +43,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--chalk); color: var(--chalk-ink); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
 
 /* bubble */
-.bubble { position: absolute; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); top: 68px;
-  margin: 0 auto; max-width: 560px; padding: 12px 16px; border-radius: 18px; background: rgba(20,20,19,.9); line-height: 1.5; cursor: pointer; }
+.bubble { align-self: center; width: 100%; box-sizing: border-box;
+  max-width: 640px; max-height: 30vh; overflow-y: auto; padding: 12px 16px; border-radius: 18px; background: rgba(20,20,19,.9); line-height: 1.5; cursor: pointer; }
 .bubble b { display: block; font-size: 13px; color: var(--muted); font-weight: 500; }
 .en { font-family: var(--font-en); font-weight: 600; }
 
@@ -125,9 +125,8 @@ input[type=range] { flex: 1; accent-color: var(--chalk); }
   </header>
 
   <div class="banner" id="banner" hidden></div>
-  <div class="bubble" id="bubble" hidden><b id="bubbleName"></b><span id="bubbleText"></span></div>
-
   <section class="dock">
+    <div class="bubble" id="bubble" hidden><b id="bubbleName"></b><span id="bubbleText"></span></div>
     <ul class="history" id="history" aria-live="polite"></ul>
     <div class="notes" id="notes" role="status"></div>
     <form class="bar" id="form">
@@ -298,13 +297,19 @@ function layout() {
   const st = $('stage'), sc = $('scene'), f = $('figure');
   const W = st.clientWidth, H = st.clientHeight;
   // cover the screen on a phone; on a wide screen show the classroom's middle band whole (the sides get a blurred copy)
+  const c = CHARS[prefs.char], a = c.anchor;
+  const TOP_ROOM = 72, BOTTOM_ROOM = 84;          // the top bar and the input bar
   let s = Math.max(W / SCENE.w, H / SCENE.h);
   if (W > H * 0.8) s = Math.min(s, H / (SCENE.h * 0.58));
+  // the whole figure (head to the input bar) must fit between the two bars
+  const figPerS = a.width * SCENE.w * c.h / c.w;   // her picture's height at scale 1
+  s = Math.min(s, Math.max(0.2, (H - TOP_ROOM - BOTTOM_ROOM) / (figPerS * a.pic + 1e-9)));
   const sw = SCENE.w * s, sh = SCENE.h * s;
-  const top = Math.min(0, Math.max(H - sh, H * 0.5 - sh * 0.6));
-  Object.assign(sc.style, { width: sw + 'px', height: sh + 'px', left: (W - sw) / 2 + 'px', top: top + 'px' });
-  const c = CHARS[prefs.char], a = c.anchor;
   const fw = a.width * sw, fh = fw * c.h / c.w;
+  const figTop = a.y * sh - a.pic * fh;            // her head, in the scene
+  let top = Math.min(0, Math.max(H - sh, H * 0.5 - sh * 0.6));
+  if (top + figTop < TOP_ROOM) top = TOP_ROOM - figTop;
+  Object.assign(sc.style, { width: sw + 'px', height: sh + 'px', left: (W - sw) / 2 + 'px', top: top + 'px' });
   Object.assign(f.style, { width: fw + 'px', height: fh + 'px', left: (a.cx * sw - fw / 2) + 'px', top: (a.y * sh - a.pic * fh) + 'px' });
 }
 let mouthTimer = null;
